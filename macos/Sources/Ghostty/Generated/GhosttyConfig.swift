@@ -49,12 +49,6 @@ enum CursorStyle: String {
     case blockHollow = "block_hollow"
 }
 
-/// Font style configuration
-enum FontStyle: String {
-    case normal, bold, italic
-    case boldItalic = "bold_italic"
-}
-
 /// Font synthetic style options
 enum FontSyntheticStyle: String {
     case none, bold, italic, all
@@ -221,7 +215,7 @@ struct GhosttyConfig {
     /// this within config files if you want to clear previously set values in
     /// configuration files or on the CLI if you want to clear values set on the
     /// CLI.
-    let fontFamily, fontFamilyBold, fontFamilyItalic, fontFamilyBoldItalic: [String]
+    var fontFamily, fontFamilyBold, fontFamilyItalic, fontFamilyBoldItalic: [String]?
 
     /// The named font style to use for each of the requested terminal font styles.
     /// This looks up the style based on the font style string advertised by the
@@ -235,7 +229,7 @@ struct GhosttyConfig {
     /// These are only valid if its corresponding font-family is also specified. If
     /// no font-family is specified, then the font-style is ignored unless you're
     /// disabling the font style.
-    let fontStyle, fontStyleBold, fontStyleItalic, fontStyleBoldItalic: Any
+    var fontStyle, fontStyleBold, fontStyleItalic, fontStyleBoldItalic: String?
 
     /// Control whether Ghostty should synthesize a style if the requested style is
     /// not available in the specified font-family.
@@ -267,7 +261,7 @@ struct GhosttyConfig {
     /// explicitly disable it. You cannot partially disable `bold-italic`.
     /// 
     /// By default, synthetic styles are enabled.
-    let fontSyntheticStyle: FontSyntheticStyle
+    var fontSyntheticStyle: FontSyntheticStyle?
 
     /// Apply a font feature. To enable multiple font features you can repeat
     /// this multiple times or use a comma-separated list of feature settings.
@@ -291,7 +285,7 @@ struct GhosttyConfig {
     /// [fontdrop.info](https://fontdrop.info).
     /// 
     /// To generally disable most ligatures, use `-calt, -liga, -dlig`.
-    let fontFeature: [String]
+    var fontFeature: [String]?
 
     /// Font size in points. This value can be a non-integer and the nearest integer
     /// pixel size will be selected. If you have a high dpi display where 1pt = 2px
@@ -309,7 +303,7 @@ struct GhosttyConfig {
     /// On Linux with GTK, font size is scaled according to both display-wide and
     /// text-specific scaling factors, which are often managed by your desktop
     /// environment (e.g. the GNOME display scale and large text settings).
-    let fontSize: Float
+    var fontSize: Float?
 
     /// A repeatable configuration to set one or more font variations values for
     /// a variable font. A variable font is a single font, usually with a filename
@@ -329,7 +323,7 @@ struct GhosttyConfig {
     /// 
     /// Common axes are: `wght` (weight), `slnt` (slant), `ital` (italic), `opsz`
     /// (optical size), `wdth` (width), `GRAD` (gradient), etc.
-    let fontVariation, fontVariationBold, fontVariationItalic, fontVariationBoldItalic: [FontVariation]
+    var fontVariation, fontVariationBold, fontVariationItalic, fontVariationBoldItalic: [FontVariation]?
 
     /// Force one or a range of Unicode codepoints to map to a specific named font.
     /// This is useful if you want to support special symbols or if you want to use
@@ -347,11 +341,11 @@ struct GhosttyConfig {
     /// 
     /// Changing this configuration at runtime will only affect new terminals,
     /// i.e. new windows, tabs, etc.
-    let fontCodepointMap: [String: String]
+    var fontCodepointMap: [String: String]?
 
     /// Draw fonts with a thicker stroke, if supported.
     /// This is currently only supported on macOS.
-    let fontThicken: Bool
+    var fontThicken: Bool?
 
     /// Strength of thickening when `font-thicken` is enabled.
     /// 
@@ -361,7 +355,7 @@ struct GhosttyConfig {
     /// Has no effect when `font-thicken` is set to `false`.
     /// 
     /// This is currently only supported on macOS.
-    let fontThickenStrength: UInt8
+    var fontThickenStrength: UInt8?
 
     /// Locations to break font shaping into multiple runs.
     /// 
@@ -388,7 +382,7 @@ struct GhosttyConfig {
     ///   * `cursor` - Break runs under the cursor.
     /// 
     /// Available since: 1.2.0
-    let fontShapingBreak: FontShapingBreak
+    var fontShapingBreak: FontShapingBreak?
 
     /// What color space to use when performing alpha blending.
     /// 
@@ -414,7 +408,7 @@ struct GhosttyConfig {
     ///   but without any of the darkening artifacts.
     /// 
     /// Available since: 1.1.0
-    let alphaBlending: AlphaBlending
+    var alphaBlending: AlphaBlending?
 
     /// All of the configurations behavior adjust various metrics determined by the
     /// font. The values can be integers (1, -1, etc.) or a percentage (20%, -15%,
@@ -440,52 +434,52 @@ struct GhosttyConfig {
     /// 
     ///   * Powerline glyphs will be adjusted along with the cell height so
     ///     that things like status lines continue to look aligned.
-    let adjustCellWidth, adjustCellHeight: Any?
+    var adjustCellWidth, adjustCellHeight: String?
 
     /// Distance in pixels or percentage adjustment from the bottom of the cell to the text baseline.
     /// Increase to move baseline UP, decrease to move baseline DOWN.
     /// See the notes about adjustments in `adjust-cell-width`.
-    let adjustFontBaseline: Any?
+    var adjustFontBaseline: String?
 
     /// Distance in pixels or percentage adjustment from the top of the cell to the top of the underline.
     /// Increase to move underline DOWN, decrease to move underline UP.
     /// See the notes about adjustments in `adjust-cell-width`.
-    let adjustUnderlinePosition: Any?
+    var adjustUnderlinePosition: String?
 
     /// Thickness in pixels of the underline.
     /// See the notes about adjustments in `adjust-cell-width`.
-    let adjustUnderlineThickness: Any?
+    var adjustUnderlineThickness: String?
 
     /// Distance in pixels or percentage adjustment from the top of the cell to the top of the strikethrough.
     /// Increase to move strikethrough DOWN, decrease to move strikethrough UP.
     /// See the notes about adjustments in `adjust-cell-width`.
-    let adjustStrikethroughPosition: Any?
+    var adjustStrikethroughPosition: String?
 
     /// Thickness in pixels or percentage adjustment of the strikethrough.
     /// See the notes about adjustments in `adjust-cell-width`.
-    let adjustStrikethroughThickness: Any?
+    var adjustStrikethroughThickness: String?
 
     /// Distance in pixels or percentage adjustment from the top of the cell to the top of the overline.
     /// Increase to move overline DOWN, decrease to move overline UP.
     /// See the notes about adjustments in `adjust-cell-width`.
-    let adjustOverlinePosition: Any?
+    var adjustOverlinePosition: String?
 
     /// Thickness in pixels or percentage adjustment of the overline.
     /// See the notes about adjustments in `adjust-cell-width`.
-    let adjustOverlineThickness: Any?
+    var adjustOverlineThickness: String?
 
     /// Thickness in pixels or percentage adjustment of the bar cursor and outlined rect cursor.
     /// See the notes about adjustments in `adjust-cell-width`.
-    let adjustCursorThickness: Any?
+    var adjustCursorThickness: String?
 
     /// Height in pixels or percentage adjustment of the cursor. Currently applies to all cursor types:
     /// bar, rect, and outlined rect.
     /// See the notes about adjustments in `adjust-cell-width`.
-    let adjustCursorHeight: Any?
+    var adjustCursorHeight: String?
 
     /// Thickness in pixels or percentage adjustment of box drawing characters.
     /// See the notes about adjustments in `adjust-cell-width`.
-    let adjustBoxThickness: Any?
+    var adjustBoxThickness: String?
 
     /// Height in pixels or percentage adjustment of maximum height for nerd font icons.
     /// 
@@ -500,7 +494,7 @@ struct GhosttyConfig {
     /// See the notes about adjustments in `adjust-cell-width`.
     /// 
     /// Available in: 1.2.0
-    let adjustIconHeight: Any?
+    var adjustIconHeight: String?
 
     /// The method to use for calculating the cell width of a grapheme cluster.
     /// The default value is `unicode` which uses the Unicode standard to determine
@@ -527,7 +521,7 @@ struct GhosttyConfig {
     /// 
     /// This configuration can be changed at runtime but will not affect existing
     /// terminals. Only new terminals will use the new configuration.
-    let graphemeWidthMethod: GraphemeWidthMethod
+    var graphemeWidthMethod: GraphemeWidthMethod?
 
     /// FreeType load flags to enable. The format of this is a list of flags to
     /// enable separated by commas. If you prefix a flag with `no-` then it is
@@ -553,7 +547,7 @@ struct GhosttyConfig {
     ///   * `autohint` - Enable the freetype auto-hinter. Enabled by default.
     /// 
     /// Example: `hinting`, `no-hinting`, `force-autohint`, `no-force-autohint`
-    let freetypeLoadFlags: FreetypeLoadFlags
+    var freetypeLoadFlags: FreetypeLoadFlags?
 
     /// A theme to use. This can be a built-in theme name, a custom theme
     /// name, or an absolute path to a custom theme file. Ghostty also supports
@@ -608,15 +602,15 @@ struct GhosttyConfig {
     /// be fixed in a future update:
     /// 
     ///   - macOS: titlebar tabs style is not updated when switching themes.
-    let theme: String?
+    var theme: String?
 
     /// Background color for the window.
     /// Specified as either hex (`#RRGGBB` or `RRGGBB`) or a named X11 color.
-    let background: UInt32
+    var background: UInt32?
 
     /// Foreground color for the window.
     /// Specified as either hex (`#RRGGBB` or `RRGGBB`) or a named X11 color.
-    let foreground: UInt32
+    var foreground: UInt32?
 
     /// Background image for the terminal.
     /// 
@@ -633,7 +627,7 @@ struct GhosttyConfig {
     /// will resolve this by sharing image textures across terminals.
     /// 
     /// Available since: 1.2.0
-    let backgroundImage: Any?
+    var backgroundImage: String?
 
     /// Background image opacity.
     /// 
@@ -654,7 +648,7 @@ struct GhosttyConfig {
     /// `0.5 * 1.5 = 0.75`.
     /// 
     /// Available since: 1.2.0
-    let backgroundImageOpacity: Float
+    var backgroundImageOpacity: Float?
 
     /// Background image position.
     /// 
@@ -672,7 +666,7 @@ struct GhosttyConfig {
     /// The default value is `center`.
     /// 
     /// Available since: 1.2.0
-    let backgroundImagePosition: BackgroundImagePosition
+    var backgroundImagePosition: BackgroundImagePosition?
 
     /// Background image fit.
     /// 
@@ -702,7 +696,7 @@ struct GhosttyConfig {
     /// The default value is `contain`.
     /// 
     /// Available since: 1.2.0
-    let backgroundImageFit: BackgroundImageFit
+    var backgroundImageFit: BackgroundImageFit?
 
     /// Whether to repeat the background image or not.
     /// 
@@ -713,7 +707,7 @@ struct GhosttyConfig {
     /// The default value is `false`.
     /// 
     /// Available since: 1.2.0
-    let backgroundImageRepeat: Bool
+    var backgroundImageRepeat: Bool?
 
     /// The foreground and background color for selection. If this is not set, then
     /// the selection color is just the inverted window background and foreground
@@ -722,7 +716,7 @@ struct GhosttyConfig {
     /// Since version 1.2.0, this can also be set to `cell-foreground` to match
     /// the cell foreground color, or `cell-background` to match the cell
     /// background color.
-    let selectionForeground, selectionBackground: Any?
+    var selectionForeground, selectionBackground: String?
 
     /// Whether to clear selected text when typing. This defaults to `true`.
     /// This is typical behavior for most terminal emulators as well as
@@ -739,7 +733,7 @@ struct GhosttyConfig {
     /// cleared by clicking once or by pressing `escape`.
     /// 
     /// Available since: 1.2.0
-    let selectionClearOnTyping: Bool
+    var selectionClearOnTyping: Bool?
 
     /// Whether to clear selected text after copying. This defaults to `false`.
     /// 
@@ -751,7 +745,7 @@ struct GhosttyConfig {
     /// When set to `false`, the selection remains visible after copying, allowing
     /// to see what was copied and potentially perform additional operations
     /// on the same selection.
-    let selectionClearOnCopy: Bool
+    var selectionClearOnCopy: Bool?
 
     /// The minimum contrast ratio between the foreground and background colors.
     /// The contrast ratio is a value between 1 and 21. A value of 1 allows for no
@@ -764,7 +758,7 @@ struct GhosttyConfig {
     /// that text will become black or white.
     /// 
     /// This value does not apply to Emoji or images.
-    let minimumContrast: Double
+    var minimumContrast: Double?
 
     /// Color palette for the 256 color form that many terminal applications use.
     /// The syntax of this configuration is `N=COLOR` where `N` is 0 to 255 (for
@@ -777,7 +771,7 @@ struct GhosttyConfig {
     /// 
     /// For definitions on the color indices and what they canonically map to,
     /// [see this cheat sheet](https://www.ditig.com/256-colors-cheat-sheet).
-    let palette: String
+    var palette: String?
 
     /// The color of the cursor. If this is not set, a default will be chosen.
     /// 
@@ -792,14 +786,14 @@ struct GhosttyConfig {
     /// 
     ///   * `cell-background` - Match the cell background color.
     ///     (Available since: 1.2.0)
-    let cursorColor: Any?
+    var cursorColor: String?
 
     /// The opacity level (opposite of transparency) of the cursor. A value of 1
     /// is fully opaque and a value of 0 is fully transparent. A value less than 0
     /// or greater than 1 will be clamped to the nearest valid value. Note that a
     /// sufficiently small value such as 0.3 may be effectively invisible and may
     /// make it difficult to find the cursor.
-    let cursorOpacity: Double
+    var cursorOpacity: Double?
 
     /// The style of the cursor. This sets the default style. A running program can
     /// still request an explicit cursor style using escape sequences (such as `CSI
@@ -816,7 +810,7 @@ struct GhosttyConfig {
     ///   * `bar`
     ///   * `underline`
     ///   * `block_hollow`
-    let cursorStyle: CursorStyle
+    var cursorStyle: CursorStyle?
 
     /// Sets the default blinking state of the cursor. This is just the default
     /// state; running programs may override the cursor style using `DECSCUSR` (`CSI
@@ -835,7 +829,7 @@ struct GhosttyConfig {
     ///   * ` ` (blank)
     ///   * `true`
     ///   * `false`
-    let cursorStyleBlink: Bool?
+    var cursorStyleBlink: Bool?
 
     /// The color of the text under the cursor. If this is not set, a default will
     /// be chosen.
@@ -843,7 +837,7 @@ struct GhosttyConfig {
     /// Since version 1.2.0, this can also be set to `cell-foreground` to match
     /// the cell foreground color, or `cell-background` to match the cell
     /// background color.
-    let cursorText: Any?
+    var cursorText: String?
 
     /// Enables the ability to move the cursor at prompts by using `alt+click` on
     /// Linux and `option+click` on macOS.
@@ -858,13 +852,13 @@ struct GhosttyConfig {
     /// behavior around edge cases are to be expected. This is unfortunately how
     /// this feature is implemented across terminals because there isn't any other
     /// way to implement it.
-    let cursorClickToMove: Bool
+    var cursorClickToMove: Bool?
 
     /// Hide the mouse immediately when typing. The mouse becomes visible again
     /// when the mouse is used (button, movement, etc.). Platform-specific behavior
     /// may dictate other scenarios where the mouse is shown. For example on macOS,
     /// the mouse is shown again when a new window, tab, or split is created.
-    let mouseHideWhileTyping: Bool
+    var mouseHideWhileTyping: Bool?
 
     /// When to scroll the surface to the bottom. The format of this is a list of
     /// options to enable separated by commas. If you prefix an option with `no-`
@@ -880,7 +874,7 @@ struct GhosttyConfig {
     ///   to display. (Currently unimplemented.)
     /// 
     /// The default is `keystroke, no-output`.
-    let scrollToBottom: String
+    var scrollToBottom: String?
 
     /// Determines whether running programs can detect the shift key pressed with a
     /// mouse click. Typically, the shift key is used to extend mouse selection.
@@ -907,7 +901,7 @@ struct GhosttyConfig {
     ///   * `false`
     ///   * `always`
     ///   * `never`
-    let mouseShiftCapture: String
+    var mouseShiftCapture: String?
 
     /// Multiplier for scrolling distance with the mouse wheel. Any value less
     /// than 0.01 or greater than 10,000 will be clamped to the nearest valid
@@ -916,7 +910,7 @@ struct GhosttyConfig {
     /// A value of "3" (default) scrolls 3 lines per tick.
     /// 
     /// Available since: 1.2.0
-    let mouseScrollMultiplier: Double
+    var mouseScrollMultiplier: Double?
 
     /// The opacity level (opposite of transparency) of the background. A value of
     /// 1 is fully opaque and a value of 0 is fully transparent. A value less than 0
@@ -927,7 +921,7 @@ struct GhosttyConfig {
     /// widgets to show through which isn't generally desirable.
     /// 
     /// On macOS, changing this configuration requires restarting Ghostty completely.
-    let backgroundOpacity: Double
+    var backgroundOpacity: Double?
 
     /// Applies background opacity to cells with an explicit background color
     /// set.
@@ -943,7 +937,7 @@ struct GhosttyConfig {
     /// regardless of whether they have an explicit background color set or not.
     /// 
     /// Available since: 1.2.0
-    let backgroundOpacityCells: Bool
+    var backgroundOpacityCells: Bool?
 
     /// Whether to blur the background when `background-opacity` is less than 1.
     /// 
@@ -976,7 +970,7 @@ struct GhosttyConfig {
     /// need to set environment-specific settings and/or install third-party plugins
     /// in order to support background blur, as there isn't a unified interface for
     /// doing so.
-    let backgroundBlur: Any
+    var backgroundBlur: String?
 
     /// The opacity level (opposite of transparency) of an unfocused split.
     /// Unfocused splits by default are slightly faded out to make it easier to see
@@ -987,7 +981,7 @@ struct GhosttyConfig {
     /// is 0.15. This value still looks weird but you can at least see what's going
     /// on. A value outside of the range 0.15 to 1 will be clamped to the nearest
     /// valid value.
-    let unfocusedSplitOpacity: Double
+    var unfocusedSplitOpacity: Double?
 
     /// The color to dim the unfocused split. Unfocused splits are dimmed by
     /// rendering a semi-transparent rectangle over the split. This sets the color of
@@ -996,13 +990,13 @@ struct GhosttyConfig {
     /// This will default to the background color.
     /// 
     /// Specified as either hex (`#RRGGBB` or `RRGGBB`) or a named X11 color.
-    let unfocusedSplitFill: UInt32?
+    var unfocusedSplitFill: UInt32?
 
     /// The color of the split divider. If this is not set, a default will be chosen.
     /// Specified as either hex (`#RRGGBB` or `RRGGBB`) or a named X11 color.
     /// 
     /// Available since: 1.1.0
-    let splitDividerColor: UInt32?
+    var splitDividerColor: UInt32?
 
     /// The command to run, usually a shell. If this is not an absolute path, it'll
     /// be looked up in the `PATH`. If this is not set, a default will be looked up
@@ -1033,7 +1027,7 @@ struct GhosttyConfig {
     /// arguments. For example, `ghostty -e fish --with --custom --args`.
     /// This flag sets the `initial-command` configuration, see that for more
     /// information.
-    let command: Any?
+    var command: String?
 
     /// This is the same as "command", but only applies to the first terminal
     /// surface created when Ghostty starts. Subsequent terminal surfaces will use
@@ -1069,7 +1063,7 @@ struct GhosttyConfig {
     ///     shell integration with a `-e`-executed command, you must either
     ///     name your binary appropriately or source the shell integration script
     ///     manually.
-    let initialCommand: Any?
+    var initialCommand: String?
 
     /// Extra environment variables to pass to commands launched in a terminal
     /// surface. The format is `env=KEY=VALUE`.
@@ -1107,7 +1101,7 @@ struct GhosttyConfig {
     /// browser.
     /// 
     /// Available since: 1.2.0
-    let env: String
+    var env: String?
 
     /// Data to send as input to the command on startup.
     /// 
@@ -1150,7 +1144,7 @@ struct GhosttyConfig {
     /// terminals.
     /// 
     /// Available since: 1.2.0
-    let input: String
+    var input: String?
 
     /// If true, keep the terminal open after the command exits. Normally, the
     /// terminal window closes when the running command (such as a shell) exits.
@@ -1158,7 +1152,7 @@ struct GhosttyConfig {
     /// received.
     /// 
     /// This is primarily useful for scripts or debugging.
-    let waitAfterCommand: Bool
+    var waitAfterCommand: Bool?
 
     /// The number of milliseconds of runtime below which we consider a process exit
     /// to be abnormal. This is used to show an error message when the process exits
@@ -1167,7 +1161,7 @@ struct GhosttyConfig {
     /// On Linux, this must be paired with a non-zero exit code. On macOS, we allow
     /// any exit code because of the way shell processes are launched via the login
     /// command.
-    let abnormalCommandExitRuntime: UInt32
+    var abnormalCommandExitRuntime: UInt32?
 
     /// The size of the scrollback buffer in bytes. This also includes the active
     /// screen. No matter what this is set to, enough memory will always be
@@ -1188,7 +1182,7 @@ struct GhosttyConfig {
     /// This is a future planned feature.
     /// 
     /// This can be changed at runtime but will only affect new terminal surfaces.
-    let scrollbackLimit: UInt64
+    var scrollbackLimit: UInt64?
 
     /// Enable URL matching. URLs are matched on hover with control (Linux) or
     /// command (macOS) pressed and open using the default system application for
@@ -1196,7 +1190,7 @@ struct GhosttyConfig {
     /// 
     /// The URL matcher is always lowest priority of any configured links (see
     /// `link`). If you want to customize URL matching, use `link` and disable this.
-    let linkUrl: Bool
+    var linkUrl: Bool?
 
     /// Show link previews for a matched URL.
     /// 
@@ -1206,14 +1200,14 @@ struct GhosttyConfig {
     /// can differ from the link destination).
     /// 
     /// Available since: 1.2.0
-    let linkPreviews: String
+    var linkPreviews: String?
 
     /// Whether to start the window in a maximized state. This setting applies
     /// to new windows and does not apply to tabs, splits, etc. However, this setting
     /// will apply to all new windows, not just the first one.
     /// 
     /// Available since: 1.1.0
-    let maximize: Bool
+    var maximize: Bool?
 
     /// Start new windows in fullscreen. This setting applies to new windows and
     /// does not apply to tabs, splits, etc. However, this setting will apply to all
@@ -1222,7 +1216,7 @@ struct GhosttyConfig {
     /// On macOS, this setting does not work if window-decoration is set to
     /// "false", because native fullscreen on macOS requires window decorations
     /// to be set.
-    let fullscreen: Bool
+    var fullscreen: Bool?
 
     /// The title Ghostty will use for the window. This will force the title of the
     /// window to be this title at all times and Ghostty will ignore any set title
@@ -1238,7 +1232,7 @@ struct GhosttyConfig {
     /// sequence will be honored but previous changes will not retroactively
     /// be set. This latter case may require you to restart programs such as Neovim
     /// to get the new title.
-    let title: String?
+    var title: String?
 
     /// The directory to change to after starting the command.
     /// 
@@ -1259,7 +1253,7 @@ struct GhosttyConfig {
     ///   * `home` - The home directory of the executing user.
     /// 
     ///   * `inherit` - The working directory of the launching process.
-    let workingDirectory: String?
+    var workingDirectory: String?
 
     /// Key bindings. The format is `trigger=action`. Duplicate triggers will
     /// overwrite previously set values. The list of actions is available in
@@ -1491,7 +1485,7 @@ struct GhosttyConfig {
     /// 
     ///  - Notably, global shortcuts have not been implemented on wlroots-based
     ///    compositors like Sway (see [upstream issue](https://github.com/emersion/xdg-desktop-portal-wlr/issues/240)).
-    let keybind: String
+    var keybind: String?
 
     /// Horizontal window padding. This applies padding between the terminal cells
     /// and the left and right window borders. The value is in points, meaning that
@@ -1510,7 +1504,7 @@ struct GhosttyConfig {
     /// left padding to 2 and the right padding to 4. If you want to set both
     /// paddings to the same value, you can use a single value. For example,
     /// `window-padding-x = 2` will set both paddings to 2.
-    let windowPaddingX: String
+    var windowPaddingX: String?
 
     /// Vertical window padding. This applies padding between the terminal cells and
     /// the top and bottom window borders. The value is in points, meaning that it
@@ -1529,7 +1523,7 @@ struct GhosttyConfig {
     /// top padding to 2 and the bottom padding to 4. If you want to set both
     /// paddings to the same value, you can use a single value. For example,
     /// `window-padding-y = 2` will set both paddings to 2.
-    let windowPaddingY: String
+    var windowPaddingY: String?
 
     /// The viewport dimensions are usually not perfectly divisible by the cell
     /// size. In this case, some extra padding on the end of a column and the bottom
@@ -1543,7 +1537,7 @@ struct GhosttyConfig {
     /// apply. The other padding is applied first and may affect how many grid cells
     /// actually exist, and this is applied last in order to balance the padding
     /// given a certain viewport size and grid cell size.
-    let windowPaddingBalance: Bool
+    var windowPaddingBalance: Bool?
 
     /// The color of the padding area of the window. Valid values are:
     /// 
@@ -1564,7 +1558,7 @@ struct GhosttyConfig {
     ///   do not look good extended.
     /// * The nearest row contains a perfect fit powerline character. These
     ///   don't look good extended.
-    let windowPaddingColor: String
+    var windowPaddingColor: String?
 
     /// Synchronize rendering with the screen refresh rate. If true, this will
     /// minimize tearing and align redraws with the screen but may cause input
@@ -1579,18 +1573,18 @@ struct GhosttyConfig {
     /// Changing this value at runtime will only affect new terminals.
     /// 
     /// This setting is only supported currently on macOS.
-    let windowVsync: Bool
+    var windowVsync: Bool?
 
     /// If true, new windows and tabs will inherit the working directory of the
     /// previously focused window. If no window was previously focused, the default
     /// working directory will be used (the `working-directory` option).
-    let windowInheritWorkingDirectory: Bool
+    var windowInheritWorkingDirectory: Bool?
 
     /// If true, new windows and tabs will inherit the font size of the previously
     /// focused window. If no window was previously focused, the default font size
     /// will be used. If this is false, the default font size specified in the
     /// configuration `font-size` will be used.
-    let windowInheritFontSize: Bool
+    var windowInheritFontSize: Bool?
 
     /// Configure a preference for window decorations. This setting specifies
     /// a _preference_; the actual OS, desktop environment, window manager, etc.
@@ -1644,7 +1638,7 @@ struct GhosttyConfig {
     /// 
     /// macOS: To hide the titlebar without removing the native window borders
     ///        or rounded corners, use `macos-titlebar-style = hidden` instead.
-    let windowDecoration: String
+    var windowDecoration: String?
 
     /// The font that will be used for the application's window and tab titles.
     /// 
@@ -1654,7 +1648,7 @@ struct GhosttyConfig {
     /// required to be a fixed-width font.
     /// 
     /// Available since: 1.1.0 (on GTK)
-    let windowTitleFontFamily: String?
+    var windowTitleFontFamily: String?
 
     /// The theme to use for the windows. Valid values:
     /// 
@@ -1674,7 +1668,7 @@ struct GhosttyConfig {
     /// non-terminal windows within Ghostty.
     /// 
     /// This is currently only supported on macOS and Linux.
-    let windowTheme: WindowTheme
+    var windowTheme: WindowTheme?
 
     /// The color space to use when interpreting terminal colors. "Terminal colors"
     /// refers to colors specified in your configuration and colors produced by
@@ -1686,7 +1680,7 @@ struct GhosttyConfig {
     ///   * `display-p3` - Interpret colors in the Display P3 color space.
     /// 
     /// This setting is currently only supported on macOS.
-    let windowColorspace: String
+    var windowColorspace: String?
 
     /// The initial window size. This size is in terminal grid cells by default.
     /// Both values must be set to take effect. If only one value is set, it is
@@ -1715,7 +1709,7 @@ struct GhosttyConfig {
     /// `window-decoration`), then this will work as expected.
     /// 
     /// Windows smaller than 10 wide by 4 high are not allowed.
-    let windowHeight, windowWidth: UInt32
+    var windowHeight, windowWidth: UInt32?
 
     /// The starting window position. This position is in pixels and is relative
     /// to the top-left corner of the primary monitor. Both values must be set to take
@@ -1740,7 +1734,7 @@ struct GhosttyConfig {
     /// Note: this is only supported on macOS. The GTK runtime does not support
     /// setting the window position, as windows are only allowed position
     /// themselves in X11 and not Wayland.
-    let windowPositionX, windowPositionY: Int16?
+    var windowPositionX, windowPositionY: Int16?
 
     /// Whether to enable saving and restoring window state. Window state includes
     /// their position, size, tabs, splits, etc. Some window state requires shell
@@ -1772,12 +1766,12 @@ struct GhosttyConfig {
     /// The default value is `default`.
     /// 
     /// This is currently only supported on macOS. This has no effect on Linux.
-    let windowSaveState: WindowSaveState
+    var windowSaveState: WindowSaveState?
 
     /// Resize the window in discrete increments of the focused surface's cell size.
     /// If this is disabled, surfaces are resized in pixel increments. Currently
     /// only supported on macOS.
-    let windowStepResize: Bool
+    var windowStepResize: Bool?
 
     /// The position where new tabs are created. Valid values:
     /// 
@@ -1785,7 +1779,7 @@ struct GhosttyConfig {
     ///     or at the end if there are no focused tabs.
     /// 
     ///   * `end` - Insert the new tab at the end of the tab list.
-    let windowNewTabPosition: WindowNewTabPosition
+    var windowNewTabPosition: WindowNewTabPosition?
 
     /// This controls when resize overlays are shown. Resize overlays are a
     /// transient popup that shows the size of the terminal while the surfaces are
@@ -1798,7 +1792,7 @@ struct GhosttyConfig {
     ///                     subsequently resized.
     /// 
     /// The default is `after-first`.
-    let resizeOverlay: String
+    var resizeOverlay: String?
 
     /// If resize overlays are enabled, this controls the position of the overlay.
     /// The possible options are:
@@ -1812,7 +1806,7 @@ struct GhosttyConfig {
     ///   * `bottom-right`
     /// 
     /// The default is `center`.
-    let resizeOverlayPosition: String
+    var resizeOverlayPosition: String?
 
     /// If resize overlays are enabled, this controls how long the overlay is
     /// visible on the screen before it is hidden. The default is ¾ of a second or
@@ -1846,7 +1840,7 @@ struct GhosttyConfig {
     /// value larger than this will be clamped to the maximum value.
     /// 
     /// Available since 1.0.0
-    let resizeOverlayDuration: TimeInterval
+    var resizeOverlayDuration: TimeInterval?
 
     /// If true, when there are multiple split panes, the mouse selects the pane
     /// that is focused. This only applies to the currently focused window; e.g.
@@ -1854,7 +1848,7 @@ struct GhosttyConfig {
     /// and bring the window to front.
     /// 
     /// Default is false.
-    let focusFollowsMouse: Bool
+    var focusFollowsMouse: Bool?
 
     /// Whether to allow programs running in the terminal to read/write to the
     /// system clipboard (OSC 52, for googling). The default is to allow clipboard
@@ -1866,22 +1860,22 @@ struct GhosttyConfig {
     ///   * `allow`
     ///   * `deny`
     /// 
-    let clipboardRead, clipboardWrite: ClipboardAccess
+    var clipboardRead, clipboardWrite: ClipboardAccess?
 
     /// Trims trailing whitespace on data that is copied to the clipboard. This does
     /// not affect data sent to the clipboard via `clipboard-write`.
-    let clipboardTrimTrailingSpaces: Bool
+    var clipboardTrimTrailingSpaces: Bool?
 
     /// Require confirmation before pasting text that appears unsafe. This helps
     /// prevent a "copy/paste attack" where a user may accidentally execute unsafe
     /// commands by pasting text with newlines.
-    let clipboardPasteProtection: Bool
+    var clipboardPasteProtection: Bool?
 
     /// If true, bracketed pastes will be considered safe. By default, bracketed
     /// pastes are considered safe. "Bracketed" pastes are pastes while the running
     /// program has bracketed paste mode enabled (a setting set by the running
     /// program, not the terminal emulator).
-    let clipboardPasteBracketedSafe: Bool
+    var clipboardPasteBracketedSafe: Bool?
 
     /// Enables or disabled title reporting (CSI 21 t). This escape sequence
     /// allows the running program to query the terminal title. This is a common
@@ -1892,7 +1886,7 @@ struct GhosttyConfig {
     /// and a minor amount of user interaction).
     /// 
     /// Available since: 1.0.1
-    let titleReport: Bool
+    var titleReport: Bool?
 
     /// The total amount of bytes that can be used for image data (e.g. the Kitty
     /// image protocol) per terminal screen. The maximum value is 4,294,967,295
@@ -1901,7 +1895,7 @@ struct GhosttyConfig {
     /// 
     /// This value is separate for primary and alternate screens so the effective
     /// limit per surface is double.
-    let imageStorageLimit: UInt32
+    var imageStorageLimit: UInt32?
 
     /// Whether to automatically copy selected text to the clipboard. `true`
     /// will prefer to copy to the selection clipboard, otherwise it will copy to
@@ -1914,7 +1908,7 @@ struct GhosttyConfig {
     /// paste is always enabled even if this is `false`.
     /// 
     /// The default value is true on Linux and macOS.
-    let copyOnSelect: CopyOnSelect
+    var copyOnSelect: CopyOnSelect?
 
     /// The action to take when the user right-clicks on the terminal surface.
     /// 
@@ -1927,13 +1921,13 @@ struct GhosttyConfig {
     ///   * `ignore` - Do nothing, ignore the right-click.
     /// 
     /// The default value is `context-menu`.
-    let rightClickAction: RightClickAction
+    var rightClickAction: RightClickAction?
 
     /// The time in milliseconds between clicks to consider a click a repeat
     /// (double, triple, etc.) or an entirely new single click. A value of zero will
     /// use a platform-specific default. The default on macOS is determined by the
     /// OS settings. On every other platform it is 500ms.
-    let clickRepeatInterval: UInt32
+    var clickRepeatInterval: UInt32?
 
     /// Additional configuration files to read. This configuration can be repeated
     /// to read multiple configuration files. Configuration files themselves can
@@ -1962,7 +1956,7 @@ struct GhosttyConfig {
     /// If "foo" contains `a = 2`, the final value of `a` will be 2, because
     /// `foo` is loaded after the configuration file that configures the
     /// nested `config-file` value.
-    let configFile: String
+    var configFile: String?
 
     /// When this is true, the default configuration file paths will be loaded.
     /// The default configuration file paths are currently only the XDG
@@ -1975,7 +1969,7 @@ struct GhosttyConfig {
     /// This is a CLI-only configuration. Setting this in a configuration file
     /// will have no effect. It is not an error, but it will not do anything.
     /// This configuration can only be set via CLI arguments.
-    let configDefaultFiles: Bool
+    var configDefaultFiles: Bool?
 
     /// Confirms that a surface should be closed before closing it.
     /// 
@@ -1983,7 +1977,7 @@ struct GhosttyConfig {
     /// any confirmation. This can also be set to `always`, which will always
     /// confirm closing a surface, even if shell integration says a process isn't
     /// running.
-    let confirmCloseSurface: String
+    var confirmCloseSurface: String?
 
     /// Whether or not to quit after the last surface is closed.
     /// 
@@ -1994,7 +1988,7 @@ struct GhosttyConfig {
     /// On Linux, if this is `true`, Ghostty can delay quitting fully until a
     /// configurable amount of time has passed after the last window is closed.
     /// See the documentation of `quit-after-last-window-closed-delay`.
-    let quitAfterLastWindowClosed: Bool
+    var quitAfterLastWindowClosed: Bool?
 
     /// Controls how long Ghostty will stay running after the last open surface has
     /// been closed. This only has an effect if `quit-after-last-window-closed` is
@@ -2035,14 +2029,14 @@ struct GhosttyConfig {
     /// `quit-after-last-window-closed` is `true`.
     /// 
     /// Only implemented on Linux.
-    let quitAfterLastWindowClosedDelay: TimeInterval?
+    var quitAfterLastWindowClosedDelay: TimeInterval?
 
     /// This controls whether an initial window is created when Ghostty
     /// is run. Note that if `quit-after-last-window-closed` is `true` and
     /// `quit-after-last-window-closed-delay` is set, setting `initial-window` to
     /// `false` will mean that Ghostty will quit after the configured delay if no
     /// window is ever created. Only implemented on Linux and macOS.
-    let initialWindow: Bool
+    var initialWindow: Bool?
 
     /// The duration that undo operations remain available. After this
     /// time, the operation will be removed from the undo stack and
@@ -2090,7 +2084,7 @@ struct GhosttyConfig {
     /// effect.
     /// 
     /// Available since: 1.2.0
-    let undoTimeout: TimeInterval
+    var undoTimeout: TimeInterval?
 
     /// The position of the "quick" terminal window. To learn more about the
     /// quick terminal, see the documentation for the `toggle_quick_terminal`
@@ -2109,7 +2103,7 @@ struct GhosttyConfig {
     /// 
     /// Note: There is no default keybind for toggling the quick terminal.
     /// To enable this feature, bind the `toggle_quick_terminal` action to a key.
-    let quickTerminalPosition: String
+    var quickTerminalPosition: String?
 
     /// The size of the quick terminal.
     /// 
@@ -2132,7 +2126,7 @@ struct GhosttyConfig {
     /// terminal would be half a screen tall, and 500 pixels wide.
     /// 
     /// Available since: 1.2.0
-    let quickTerminalSize: CGSize
+    var quickTerminalSize: CGSize?
 
     /// The layer of the quick terminal window. The higher the layer,
     /// the more windows the quick terminal may conceal.
@@ -2160,7 +2154,7 @@ struct GhosttyConfig {
     /// GTK Wayland only.
     /// 
     /// Available since: 1.2.0
-    let gtkQuickTerminalLayer: String
+    var gtkQuickTerminalLayer: String?
 
     /// The namespace for the quick terminal window.
     /// 
@@ -2171,7 +2165,7 @@ struct GhosttyConfig {
     /// GTK Wayland only.
     /// 
     /// Available since: 1.2.0
-    let gtkQuickTerminalNamespace: String
+    var gtkQuickTerminalNamespace: String?
 
     /// The screen where the quick terminal should show up.
     /// 
@@ -2193,14 +2187,14 @@ struct GhosttyConfig {
     /// by the operating system.
     /// 
     /// Only implemented on macOS.
-    let quickTerminalScreen: String
+    var quickTerminalScreen: String?
 
     /// Duration (in seconds) of the quick terminal enter and exit animation.
     /// Set it to 0 to disable animation completely. This can be changed at
     /// runtime.
     /// 
     /// Only implemented on macOS.
-    let quickTerminalAnimationDuration: Double
+    var quickTerminalAnimationDuration: Double?
 
     /// Automatically hide the quick terminal when focus shifts to another window.
     /// Set it to false for the quick terminal to remain open even when it loses focus.
@@ -2210,7 +2204,7 @@ struct GhosttyConfig {
     /// accessible than on macOS, meaning that it is more preferable to keep the
     /// quick terminal open until the user has completed their task.
     /// This default may change in the future.
-    let quickTerminalAutohide: Bool
+    var quickTerminalAutohide: Bool?
 
     /// This configuration option determines the behavior of the quick terminal
     /// when switching between macOS spaces. macOS spaces are virtual desktops
@@ -2232,7 +2226,7 @@ struct GhosttyConfig {
     /// On Linux the behavior is always equivalent to `move`.
     /// 
     /// Available since: 1.1.0
-    let quickTerminalSpaceBehavior: String
+    var quickTerminalSpaceBehavior: String?
 
     /// Determines under which circumstances that the quick terminal should receive
     /// keyboard input. See the corresponding [Wayland documentation](https://wayland.app/protocols/wlr-layer-shell-unstable-v1#zwlr_layer_surface_v1:enum:keyboard_interactivity)
@@ -2262,7 +2256,7 @@ struct GhosttyConfig {
     /// On macOS the behavior is always equivalent to `on-demand`.
     /// 
     /// Available since: 1.2.0
-    let quickTerminalKeyboardInteractivity: String
+    var quickTerminalKeyboardInteractivity: String?
 
     /// Whether to enable shell integration auto-injection or not. Shell integration
     /// greatly enhances the terminal experience by enabling a number of features:
@@ -2288,7 +2282,7 @@ struct GhosttyConfig {
     ///   * `bash`, `elvish`, `fish`, `zsh` - Use this specific shell injection scheme.
     /// 
     /// The default value is `detect`.
-    let shellIntegration: ShellIntegration
+    var shellIntegration: ShellIntegration?
 
     /// Shell integration features to enable. These require our shell integration
     /// to be loaded, either automatically via shell-integration or manually.
@@ -2328,7 +2322,7 @@ struct GhosttyConfig {
     /// when both `ssh-env` and `ssh-terminfo` are enabled, Ghostty will install its
     /// terminfo on remote hosts and use `xterm-ghostty` as TERM, falling back to
     /// `xterm-256color` with environment variables if terminfo installation fails.
-    let shellIntegrationFeatures: String
+    var shellIntegrationFeatures: String?
 
     /// Custom entries into the command palette.
     /// 
@@ -2352,7 +2346,7 @@ struct GhosttyConfig {
     /// ```
     /// 
     /// Available since: 1.2.0
-    let commandPaletteEntry: String
+    var commandPaletteEntry: String?
 
     /// Sets the reporting format for OSC sequences that request color information.
     /// Ghostty currently supports OSC 10 (foreground), OSC 11 (background), and
@@ -2371,7 +2365,7 @@ struct GhosttyConfig {
     ///   * `16-bit` - Color components are returned scaled, e.g. `rrrr/gggg/bbbb`
     /// 
     /// The default value is `16-bit`.
-    let oscColorReportFormat: String
+    var oscColorReportFormat: String?
 
     /// If true, allows the "KAM" mode (ANSI mode 2) to be used within
     /// the terminal. KAM disables keyboard input at the request of the
@@ -2379,7 +2373,7 @@ struct GhosttyConfig {
     /// to be enabled. This will not be documented further because
     /// if you know you need KAM, you know. If you don't know if you
     /// need KAM, you don't need it.
-    let vtKamAllowed: Bool
+    var vtKamAllowed: Bool?
 
     /// Custom shaders to run after the default shaders. This is a file path
     /// to a GLSL-syntax shader for all platforms.
@@ -2452,7 +2446,7 @@ struct GhosttyConfig {
     /// will be run in the order they are specified.
     /// 
     /// This can be changed at runtime and will affect all open terminals.
-    let customShader: String
+    var customShader: String?
 
     /// If `true` (default), the focused terminal surface will run an animation
     /// loop when custom shaders are used. This uses slightly more CPU (generally
@@ -2470,7 +2464,7 @@ struct GhosttyConfig {
     /// depending on the shader and your terminal usage.
     /// 
     /// This can be changed at runtime and will affect all open terminals.
-    let customShaderAnimation: String
+    var customShaderAnimation: String?
 
     /// Bell features to enable if bell support is available in your runtime. Not
     /// all features are available on all runtimes. The format of this is a list of
@@ -2523,7 +2517,7 @@ struct GhosttyConfig {
     /// Example: `audio`, `no-audio`, `system`, `no-system`
     /// 
     /// Available since: 1.2.0
-    let bellFeatures: String
+    var bellFeatures: String?
 
     /// If `audio` is an enabled bell feature, this is a path to an audio file. If
     /// the path is not absolute, it is considered relative to the directory of the
@@ -2532,7 +2526,7 @@ struct GhosttyConfig {
     /// to reference the user's home directory. (GTK only)
     /// 
     /// Available since: 1.2.0
-    let bellAudioPath: Any?
+    var bellAudioPath: String?
 
     /// If `audio` is an enabled bell feature, this is the volume to play the audio
     /// file at (relative to the system volume). This is a floating point number
@@ -2540,7 +2534,7 @@ struct GhosttyConfig {
     /// (GTK only)
     /// 
     /// Available since: 1.2.0
-    let bellAudioVolume: Double
+    var bellAudioVolume: Double?
 
     /// Control the in-app notifications that Ghostty shows.
     /// 
@@ -2569,7 +2563,7 @@ struct GhosttyConfig {
     /// This configuration only applies to GTK.
     /// 
     /// Available since: 1.1.0
-    let appNotifications: String
+    var appNotifications: String?
 
     /// If anything other than false, fullscreen mode on macOS will not use the
     /// native fullscreen, but make the window fullscreen without animations and
@@ -2600,7 +2594,7 @@ struct GhosttyConfig {
     /// Changing this option at runtime works, but will only apply to the next
     /// time the window is made fullscreen. If a window is already fullscreen,
     /// it will retain the previous setting until fullscreen is exited.
-    let macosNonNativeFullscreen: String
+    var macosNonNativeFullscreen: String?
 
     /// Whether the window buttons in the macOS titlebar are visible. The window
     /// buttons are the colored buttons in the upper left corner of most macOS apps,
@@ -2621,7 +2615,7 @@ struct GhosttyConfig {
     /// Changing this option at runtime only applies to new windows.
     /// 
     /// Available since: 1.2.0
-    let macosWindowButtons: MacWindowButtons
+    var macosWindowButtons: MacWindowButtons?
 
     /// The style of the macOS titlebar. Available values are: "native",
     /// "transparent", "tabs", and "hidden".
@@ -2663,7 +2657,7 @@ struct GhosttyConfig {
     /// most cases.
     /// 
     /// Changing this option at runtime only applies to new windows.
-    let macosTitlebarStyle: MacTitlebarStyle
+    var macosTitlebarStyle: MacTitlebarStyle?
 
     /// Whether the proxy icon in the macOS titlebar is visible. The proxy icon
     /// is the icon that represents the folder of the current working directory.
@@ -2684,7 +2678,7 @@ struct GhosttyConfig {
     /// Therefore, to make this work after changing the setting, you must
     /// usually `cd` to a different directory, open a different file in an
     /// editor, etc.
-    let macosTitlebarProxyIcon: String
+    var macosTitlebarProxyIcon: String?
 
     /// Controls the windowing behavior when dropping a file or folder
     /// onto the Ghostty icon in the macOS dock.
@@ -2699,7 +2693,7 @@ struct GhosttyConfig {
     /// 
     /// This setting is only supported on macOS and has no effect on other
     /// platforms.
-    let macosDockDropBehavior: MacOSDockDropBehavior
+    var macosDockDropBehavior: MacOSDockDropBehavior?
 
     /// macOS doesn't have a distinct "alt" key and instead has the "option"
     /// key which behaves slightly differently. On macOS by default, the
@@ -2733,12 +2727,12 @@ struct GhosttyConfig {
     /// 
     /// The values `left` or `right` enable this for the left or right *Option*
     /// key, respectively.
-    let macosOptionAsAlt: String?
+    var macosOptionAsAlt: String?
 
     /// Whether to enable the macOS window shadow. The default value is true.
     /// With some window managers and window transparency settings, you may
     /// find false more visually appealing.
-    let macosWindowShadow: Bool
+    var macosWindowShadow: Bool?
 
     /// If true, the macOS icon in the dock and app switcher will be hidden. This is
     /// mainly intended for those primarily using the quick-terminal mode.
@@ -2760,7 +2754,7 @@ struct GhosttyConfig {
     /// will no longer be automatic. This is a limitation of macOS.
     /// 
     /// Available since: 1.2.0
-    let macosHidden: String
+    var macosHidden: String?
 
     /// If true, Ghostty on macOS will automatically enable the "Secure Input"
     /// feature when it detects that a password prompt is being displayed.
@@ -2778,7 +2772,7 @@ struct GhosttyConfig {
     /// with legitimate accessibility software (or software that uses the
     /// accessibility APIs), since secure input prevents any application from
     /// reading keyboard events.
-    let macosAutoSecureInput: Bool
+    var macosAutoSecureInput: Bool?
 
     /// If true, Ghostty will show a graphical indication when secure input is
     /// enabled. This indication is generally recommended to know when secure input
@@ -2788,7 +2782,7 @@ struct GhosttyConfig {
     /// or it is manually (and typically temporarily) enabled. However, if you
     /// always have secure input enabled, the indication can be distracting and
     /// you may want to disable it.
-    let macosSecureInputIndication: Bool
+    var macosSecureInputIndication: Bool?
 
     /// Customize the macOS app icon.
     /// 
@@ -2823,7 +2817,7 @@ struct GhosttyConfig {
     ///     This is because the update dialog is managed through a
     ///     separate framework and cannot be customized without significant
     ///     effort.
-    let macosIcon: MacAppIcon
+    var macosIcon: MacAppIcon?
 
     /// The absolute path to the custom icon file.
     /// Supported formats include PNG, JPEG, and ICNS.
@@ -2832,7 +2826,7 @@ struct GhosttyConfig {
     /// 
     /// Note: This configuration is required when `macos-icon` is set to
     /// `custom`
-    let macosCustomIcon: String?
+    var macosCustomIcon: String?
 
     /// The material to use for the frame of the macOS app icon.
     /// 
@@ -2845,7 +2839,7 @@ struct GhosttyConfig {
     /// 
     /// Note: This configuration is required when `macos-icon` is set to
     /// `custom-style`.
-    let macosIconFrame: MacAppIcon
+    var macosIconFrame: MacAppIcon?
 
     /// The color of the ghost in the macOS app icon.
     /// 
@@ -2853,7 +2847,7 @@ struct GhosttyConfig {
     /// `custom-style`.
     /// 
     /// Specified as either hex (`#RRGGBB` or `RRGGBB`) or a named X11 color.
-    let macosIconGhostColor: UInt32?
+    var macosIconGhostColor: UInt32?
 
     /// The color of the screen in the macOS app icon.
     /// 
@@ -2865,7 +2859,7 @@ struct GhosttyConfig {
     /// 
     /// Note: This configuration is required when `macos-icon` is set to
     /// `custom-style`.
-    let macosIconScreenColor: String?
+    var macosIconScreenColor: String?
 
     /// Whether macOS Shortcuts are allowed to control Ghostty.
     /// 
@@ -2889,7 +2883,7 @@ struct GhosttyConfig {
     /// * `deny` - Deny Shortcuts from controlling Ghostty.
     /// 
     /// Available since: 1.2.0
-    let macosShortcuts: String
+    var macosShortcuts: String?
 
     /// Put every surface (tab, split, window) into a dedicated Linux cgroup.
     /// 
@@ -2916,7 +2910,7 @@ struct GhosttyConfig {
     ///   * `always` - Always use cgroups.
     ///   * `single-instance` - Enable cgroups only for Ghostty instances launched
     ///     as single-instance applications (see gtk-single-instance).
-    let linuxCgroup: String
+    var linuxCgroup: String?
 
     /// Memory limit for any individual terminal process (tab, split, window,
     /// etc.) in bytes. If this is unset then no memory limit will be set.
@@ -2925,14 +2919,14 @@ struct GhosttyConfig {
     /// controller, which is a soft limit. You should configure something like
     /// systemd-oom to handle killing processes that have too much memory
     /// pressure.
-    let linuxCgroupMemoryLimit: UInt64?
+    var linuxCgroupMemoryLimit: UInt64?
 
     /// Number of processes limit for any individual terminal process (tab, split,
     /// window, etc.). If this is unset then no limit will be set.
     /// 
     /// Note that this sets the "pids.max" configuration for the process number
     /// controller, which is a hard limit.
-    let linuxCgroupProcessesLimit: UInt64?
+    var linuxCgroupProcessesLimit: UInt64?
 
     /// If this is false, then any cgroup initialization (for linux-cgroup)
     /// will be allowed to fail and the failure is ignored. This is useful if
@@ -2945,13 +2939,13 @@ struct GhosttyConfig {
     /// 
     /// Note: This currently only affects cgroup initialization. Subprocesses
     /// must always be able to move themselves into an isolated cgroup.
-    let linuxCgroupHardFail: Bool
+    var linuxCgroupHardFail: Bool?
 
     /// Enable or disable GTK's OpenGL debugging logs. The default is `true` for
     /// debug builds, `false` for all others.
     /// 
     /// Available since: 1.1.0
-    let gtkOpenglDebug: Bool
+    var gtkOpenglDebug: Bool?
 
     /// If `true`, the Ghostty GTK application will run in single-instance mode:
     /// each new `ghostty` process launched will result in a new window if there is
@@ -2981,7 +2975,7 @@ struct GhosttyConfig {
     /// 
     /// Note that debug builds of Ghostty have a separate single-instance ID
     /// so you can test single instance without conflicting with release builds.
-    let gtkSingleInstance: GtkSingleInstance
+    var gtkSingleInstance: GtkSingleInstance?
 
     /// When enabled, the full GTK titlebar is displayed instead of your window
     /// manager's simple titlebar. The behavior of this option will vary with your
@@ -2989,7 +2983,7 @@ struct GhosttyConfig {
     /// 
     /// This option does nothing when `window-decoration` is false or when running
     /// under macOS.
-    let gtkTitlebar: Bool
+    var gtkTitlebar: Bool?
 
     /// Determines the side of the screen that the GTK tab bar will stick to.
     /// Top, bottom, and hidden are supported. The default is top.
@@ -2999,13 +2993,13 @@ struct GhosttyConfig {
     /// tabs. Alternatively, you can use the `toggle_tab_overview` action in a
     /// keybind if your window doesn't have a title bar, or you can switch tabs
     /// with keybinds.
-    let gtkTabsLocation: GtkTabsLocation
+    var gtkTabsLocation: GtkTabsLocation?
 
     /// If this is `true`, the titlebar will be hidden when the window is maximized,
     /// and shown when the titlebar is unmaximized. GTK only.
     /// 
     /// Available since: 1.1.0
-    let gtkTitlebarHideWhenMaximized: Bool
+    var gtkTitlebarHideWhenMaximized: Bool?
 
     /// Determines the appearance of the top and bottom bars tab bar.
     /// 
@@ -3015,7 +3009,7 @@ struct GhosttyConfig {
     ///  * `raised` - Top and bottom bars cast a shadow on the terminal area.
     ///  * `raised-border` - Similar to `raised` but the shadow is replaced with a
     ///    more subtle border.
-    let gtkToolbarStyle: String
+    var gtkToolbarStyle: String?
 
     /// The style of the GTK titlbar. Available values are `native` and `tabs`.
     /// 
@@ -3030,13 +3024,13 @@ struct GhosttyConfig {
     /// `tabs` title bar can be used to drag the window around.
     /// 
     /// The default style is `native`.
-    let gtkTitlebarStyle: String
+    var gtkTitlebarStyle: String?
 
     /// If `true` (default), then the Ghostty GTK tabs will be "wide." Wide tabs
     /// are the new typical Gnome style where tabs fill their available space.
     /// If you set this to `false` then tabs will only take up space they need,
     /// which is the old style.
-    let gtkWideTabs: Bool
+    var gtkWideTabs: Bool?
 
     /// Custom CSS files to be loaded.
     /// 
@@ -3059,11 +3053,11 @@ struct GhosttyConfig {
     /// The file size limit for a single stylesheet is 5MiB.
     /// 
     /// Available since: 1.1.0
-    let gtkCustomCss: String
+    var gtkCustomCss: String?
 
     /// If `true` (default), applications running in the terminal can show desktop
     /// notifications using certain escape sequences such as OSC 9 or OSC 777.
-    let desktopNotifications: Bool
+    var desktopNotifications: Bool?
 
     /// Modifies the color used for bold text in the terminal.
     /// 
@@ -3082,14 +3076,14 @@ struct GhosttyConfig {
     /// usage).
     /// 
     /// Available since Ghostty 1.2.0.
-    let boldColor: Any?
+    var boldColor: String?
 
     /// The opacity level (opposite of transparency) of the faint text. A value of
     /// 1 is fully opaque and a value of 0 is fully transparent. A value less than 0
     /// or greater than 1 will be clamped to the nearest valid value.
     /// 
     /// Available since Ghostty 1.2.0.
-    let faintOpacity: Double
+    var faintOpacity: Double?
 
     /// This will be used to set the `TERM` environment variable.
     /// HACK: We set this with an `xterm` prefix because vim uses that to enable key
@@ -3097,11 +3091,11 @@ struct GhosttyConfig {
     /// features. An option exists in vim to modify this: `:set
     /// keyprotocol=ghostty:kitty`, however a bug in the implementation prevents it
     /// from working properly. https://github.com/vim/vim/pull/13211 fixes this.
-    let term: String
+    var term: String?
 
     /// String to send when we receive `ENQ` (`0x05`) from the command that we are
     /// running. Defaults to an empty string if not set.
-    let enquiryResponse: String
+    var enquiryResponse: String?
 
     /// Control the auto-update functionality of Ghostty. This is only supported
     /// on macOS currently, since Linux builds are distributed via package
@@ -3126,7 +3120,7 @@ struct GhosttyConfig {
     /// preference stored in the standard user defaults (`defaults(1)`).
     /// 
     /// Changing this value at runtime works after a small delay.
-    let autoUpdate: String?
+    var autoUpdate: String?
 
     /// The release channel to use for auto-updates.
     /// 
@@ -3148,6 +3142,6 @@ struct GhosttyConfig {
     /// Ghostty to take effect.
     /// 
     /// This only works on macOS since only macOS has an auto-update feature.
-    let autoUpdateChannel: String?
+    var autoUpdateChannel: String?
 
 }

@@ -165,16 +165,6 @@ fn generateCursorStyleEnum(writer: anytype, visibility: []const u8) !void {
 fn generateFontEnums(writer: anytype, visibility: []const u8) !void {
     try writer.print(
         \\
-        \\/// Font style configuration
-        \\{s}enum FontStyle: String {{
-        \\    case normal, bold, italic
-        \\    case boldItalic = "bold_italic"
-        \\}}
-        \\
-    , .{visibility});
-    
-    try writer.print(
-        \\
         \\/// Font synthetic style options
         \\{s}enum FontSyntheticStyle: String {{
         \\    case none, bold, italic, all
@@ -445,13 +435,16 @@ fn generateSwiftDeclarations(alloc: Allocator, writer: anytype, fields: []const 
         const type_name = entry.key_ptr.*;
         const names = entry.value_ptr.items;
         
-        try writer.print("    {s}let ", .{visibility});
+        try writer.print("    {s}var ", .{visibility});
         for (names, 0..) |field_name, idx| {
             if (idx > 0) try writer.writeAll(", ");
             try writer.writeAll(field_name);
         }
         try writer.writeAll(": ");
         try writer.writeAll(type_name);
+        // Always use optional here, for easier initialization
+        const optional_suffix = if (std.mem.endsWith(u8, type_name, "?")) "" else "?";
+        try writer.writeAll(optional_suffix);
         try writer.writeAll("\n");
     }
     try writer.writeAll("\n");
@@ -725,8 +718,7 @@ fn zigTypeToSwiftType(alloc: Allocator, comptime T: type) ![]const u8 {
             const type_name = @typeName(T);
             return try handleKnownStructByName(alloc, type_name);
         },
-        .@"union" => try alloc.dupe(u8, "Any"),
-        else => try alloc.dupe(u8, "Any"),
+        else => try alloc.dupe(u8, "String"),
     };
 }
 
@@ -870,10 +862,6 @@ fn handleKnownStructByName(alloc: Allocator, type_name: []const u8) ![]const u8 
     }
     
     // Font style types
-    if (std.mem.indexOf(u8, type_name, "FontStyle") != null and 
-        std.mem.indexOf(u8, type_name, "FontSyntheticStyle") == null) {
-        return try alloc.dupe(u8, "FontStyle");
-    }
     if (std.mem.indexOf(u8, type_name, "FontSyntheticStyle") != null) {
         return try alloc.dupe(u8, "FontSyntheticStyle");
     }
@@ -885,6 +873,9 @@ fn handleKnownStructByName(alloc: Allocator, type_name: []const u8) ![]const u8 
     }
     if (std.mem.indexOf(u8, type_name, "MetricModifier") != null) {
         return try alloc.dupe(u8, "Float");
+    }
+    if (std.mem.indexOf(u8, type_name, "MetricModifier") != null) {
+        return try alloc.dupe(u8, "String"); // MetricModifier can be pixels or percentage
     }
     if (std.mem.indexOf(u8, type_name, "Theme") != null) {
         return try alloc.dupe(u8, "String");
