@@ -77,18 +77,19 @@ fn generateSwiftHeader(writer: anytype, config: GenerationConfig) !void {
         \\
         \\import Foundation
         \\
+        \\
     );
     
     // FontVariation struct and extension
     try generateFontVariation(writer, visibility);
     
-    try writer.writeAll("// MARK: - Configuration Enums\n\n");
+    try writer.writeAll("\n// MARK: - Configuration Enums\n\n");
     
     // Generate all enums
     try generateConfigurationEnums(writer, visibility);
     
     // Start GhosttyConfig struct
-    try writer.print("/// Configuration options for Ghostty\n{s}struct GhosttyConfig {{\n\n", .{visibility});
+    try writer.print("\n/// Configuration options for Ghostty\n{s}struct GhosttyConfig {{\n\n", .{visibility});
 }
 
 fn generateFontVariation(writer: anytype, visibility: []const u8) !void {
@@ -97,7 +98,7 @@ fn generateFontVariation(writer: anytype, visibility: []const u8) !void {
         \\{s}struct FontVariation {{
         \\    {s}let axis: String
         \\    {s}let value: Float
-        \\    
+        \\
         \\    {s}init(axis: String, value: Float) {{
         \\        self.axis = axis
         \\        self.value = value
@@ -107,28 +108,29 @@ fn generateFontVariation(writer: anytype, visibility: []const u8) !void {
     , .{ visibility, visibility, visibility, visibility });
     
     try writer.print(
+        \\
         \\/// Common font variation axes
         \\{s}extension FontVariation {{
         \\    static func weight(_ value: Float) -> FontVariation {{
         \\        FontVariation(axis: "wght", value: value)
         \\    }}
-        \\    
+        \\
         \\    static func slant(_ value: Float) -> FontVariation {{
         \\        FontVariation(axis: "slnt", value: value)
         \\    }}
-        \\    
+        \\
         \\    static func italic(_ value: Float) -> FontVariation {{
         \\        FontVariation(axis: "ital", value: value)
         \\    }}
-        \\    
+        \\
         \\    static func opticalSize(_ value: Float) -> FontVariation {{
         \\        FontVariation(axis: "opsz", value: value)
         \\    }}
-        \\    
+        \\
         \\    static func width(_ value: Float) -> FontVariation {{
         \\        FontVariation(axis: "wdth", value: value)
         \\    }}
-        \\    
+        \\
         \\    static func grade(_ value: Float) -> FontVariation {{
         \\        FontVariation(axis: "GRAD", value: value)
         \\    }}
@@ -143,6 +145,9 @@ fn generateConfigurationEnums(writer: anytype, visibility: []const u8) !void {
     try generateImageEnums(writer, visibility);
     try generateInteractionEnums(writer, visibility);
     try generateRenderingEnums(writer, visibility);
+    try generateWindowEnums(writer, visibility);
+    try generateMacOSEnums(writer, visibility);
+    try generateGtkEnums(writer, visibility);
     try generateFreetypeStruct(writer, visibility);
 }
 
@@ -150,9 +155,7 @@ fn generateCursorStyleEnum(writer: anytype, visibility: []const u8) !void {
     try writer.print(
         \\/// Cursor style for the terminal
         \\{s}enum CursorStyle: String {{
-        \\    case bar = "bar"
-        \\    case block = "block"
-        \\    case underline = "underline"
+        \\    case bar, block, underline
         \\    case blockHollow = "block_hollow"
         \\}}
         \\
@@ -161,32 +164,29 @@ fn generateCursorStyleEnum(writer: anytype, visibility: []const u8) !void {
 
 fn generateFontEnums(writer: anytype, visibility: []const u8) !void {
     try writer.print(
+        \\
         \\/// Font style configuration
         \\{s}enum FontStyle: String {{
-        \\    case normal = "normal"
-        \\    case bold = "bold"
-        \\    case italic = "italic"
+        \\    case normal, bold, italic
         \\    case boldItalic = "bold_italic"
         \\}}
         \\
     , .{visibility});
     
     try writer.print(
+        \\
         \\/// Font synthetic style options
         \\{s}enum FontSyntheticStyle: String {{
-        \\    case none = "none"
-        \\    case bold = "bold"
-        \\    case italic = "italic"
-        \\    case all = "all"
+        \\    case none, bold, italic, all
         \\}}
         \\
     , .{visibility});
     
     try writer.print(
+        \\
         \\/// Font shaping line break options
         \\{s}enum FontShapingBreak: String {{
-        \\    case word = "word"
-        \\    case anywhere = "anywhere"
+        \\    case word, anywhere
         \\}}
         \\
     , .{visibility});
@@ -194,9 +194,10 @@ fn generateFontEnums(writer: anytype, visibility: []const u8) !void {
 
 fn generateImageEnums(writer: anytype, visibility: []const u8) !void {
     try writer.print(
+        \\
         \\/// Background image positioning
         \\{s}enum BackgroundImagePosition: String {{
-        \\    case center = "center"
+        \\    case center
         \\    case topLeft = "top-left"
         \\    case topCenter = "top-center"
         \\    case topRight = "top-right"
@@ -208,12 +209,10 @@ fn generateImageEnums(writer: anytype, visibility: []const u8) !void {
     , .{visibility});
     
     try writer.print(
+        \\
         \\/// Background image fit options
         \\{s}enum BackgroundImageFit: String {{
-        \\    case fill = "fill"
-        \\    case contain = "contain"
-        \\    case cover = "cover"
-        \\    case stretch = "stretch"
+        \\    case fill, contain, cover, stretch
         \\}}
         \\
     , .{visibility});
@@ -221,42 +220,37 @@ fn generateImageEnums(writer: anytype, visibility: []const u8) !void {
 
 fn generateInteractionEnums(writer: anytype, visibility: []const u8) !void {
     try writer.print(
+        \\
         \\/// Clipboard access control
         \\{s}enum ClipboardAccess: String {{
-        \\    case allow = "allow"
-        \\    case deny = "deny"
-        \\    case ask = "ask"
+        \\    case allow, deny, ask
         \\}}
         \\
     , .{visibility});
     
     try writer.print(
+        \\
         \\/// Copy on select behavior
         \\{s}enum CopyOnSelect: String {{
-        \\    case never = "never"
-        \\    case always = "always"
-        \\    case clipboard = "clipboard"
+        \\    case never, always, clipboard
         \\}}
         \\
     , .{visibility});
     
     try writer.print(
+        \\
         \\/// Right click action
         \\{s}enum RightClickAction: String {{
-        \\    case paste = "paste"
-        \\    case menu = "menu"
-        \\    case none = "none"
+        \\    case paste, menu, none
         \\}}
         \\
     , .{visibility});
     
     try writer.print(
+        \\
         \\/// Window theme options
         \\{s}enum WindowTheme: String {{
-        \\    case auto = "auto"
-        \\    case light = "light"
-        \\    case dark = "dark"
-        \\    case system = "system"
+        \\    case auto, light, dark, system
         \\}}
         \\
     , .{visibility});
@@ -264,20 +258,19 @@ fn generateInteractionEnums(writer: anytype, visibility: []const u8) !void {
 
 fn generateRenderingEnums(writer: anytype, visibility: []const u8) !void {
     try writer.print(
+        \\
         \\/// Alpha blending style options
         \\{s}enum AlphaBlending: String {{
-        \\    case straight = "straight"
-        \\    case premultiplied = "premultiplied"
+        \\    case straight, premultiplied
         \\}}
         \\
     , .{visibility});
     
     try writer.print(
+        \\
         \\/// Grapheme width calculation method
         \\{s}enum GraphemeWidthMethod: String {{
-        \\    case unicode = "unicode"
-        \\    case legacy = "legacy"
-        \\    case wezterm = "wezterm"
+        \\    case unicode, legacy, wezterm
         \\}}
         \\
     , .{visibility});
@@ -285,11 +278,12 @@ fn generateRenderingEnums(writer: anytype, visibility: []const u8) !void {
 
 fn generateFreetypeStruct(writer: anytype, visibility: []const u8) !void {
     try writer.print(
+        \\
         \\/// FreeType load flags
         \\{s}struct FreetypeLoadFlags: OptionSet {{
         \\    {s}let rawValue: Int
         \\    {s}init(rawValue: Int) {{ self.rawValue = rawValue }}
-        \\    
+        \\
         \\    {s}static let defaultFlags: FreetypeLoadFlags = []
         \\    {s}static let noHinting = FreetypeLoadFlags(rawValue: 1 << 0)
         \\    {s}static let forceAutoHint = FreetypeLoadFlags(rawValue: 1 << 1)
@@ -297,6 +291,72 @@ fn generateFreetypeStruct(writer: anytype, visibility: []const u8) !void {
         \\}}
         \\
     , .{ visibility, visibility, visibility, visibility, visibility, visibility, visibility });
+}
+
+fn generateWindowEnums(writer: anytype, visibility: []const u8) !void {
+    try writer.print(
+        \\
+        \\/// Window save state options
+        \\{s}enum WindowSaveState: String {{
+        \\    case never, `default`, always
+        \\}}
+        \\
+        \\/// Window new tab position
+        \\{s}enum WindowNewTabPosition: String {{
+        \\    case current, end
+        \\}}
+        \\
+        \\/// Shell integration options
+        \\{s}enum ShellIntegration: String {{
+        \\    case none, fish, bash, zsh
+        \\}}
+        \\
+    , .{ visibility, visibility, visibility });
+}
+
+fn generateMacOSEnums(writer: anytype, visibility: []const u8) !void {
+    try writer.print(
+        \\
+        \\/// macOS window buttons position
+        \\{s}enum MacWindowButtons: String {{
+        \\    case left, right, hidden
+        \\}}
+        \\
+        \\/// macOS titlebar style
+        \\{s}enum MacTitlebarStyle: String {{
+        \\    case native, tabs, transparent
+        \\}}
+        \\
+        \\/// macOS app icon options
+        \\{s}enum MacAppIcon: String {{
+        \\    case ghost, terminal, blueprint, chalkboard, microchip, glass, holographic, paper, retro, xray
+        \\    case custom = "custom"
+        \\}}
+        \\
+        \\/// macOS Dock drop behavior
+        \\{s}enum MacOSDockDropBehavior: String {{
+        \\    case newWindow = "new-window"
+        \\    case newTab = "new-tab"
+        \\    case currentTab = "current-tab"
+        \\}}
+        \\
+    , .{ visibility, visibility, visibility, visibility });
+}
+
+fn generateGtkEnums(writer: anytype, visibility: []const u8) !void {
+    try writer.print(
+        \\
+        \\/// GTK tabs location
+        \\{s}enum GtkTabsLocation: String {{
+        \\    case top, bottom, left, right
+        \\}}
+        \\
+        \\/// GTK single instance mode
+        \\{s}enum GtkSingleInstance: String {{
+        \\    case desktop, session, never
+        \\}}
+        \\
+    , .{ visibility, visibility });
 }
 
 fn generateSwiftFooter(writer: anytype) !void {
@@ -671,7 +731,7 @@ fn zigTypeToSwiftType(alloc: Allocator, comptime T: type) ![]const u8 {
 }
 
 fn handleKnownEnumByName(alloc: Allocator, type_name: []const u8) ![]const u8 {
-    // Only handle enums we explicitly know about
+    // Basic UI enums we generate
     if (std.mem.indexOf(u8, type_name, "CursorStyle") != null) {
         return try alloc.dupe(u8, "CursorStyle");
     }
@@ -699,6 +759,90 @@ fn handleKnownEnumByName(alloc: Allocator, type_name: []const u8) ![]const u8 {
     if (std.mem.indexOf(u8, type_name, "BackgroundImageFit") != null) {
         return try alloc.dupe(u8, "BackgroundImageFit");
     }
+    
+    // Additional Config enums that are now Swift enums (instead of String)
+    if (std.mem.indexOf(u8, type_name, "WindowSaveState") != null) {
+        return try alloc.dupe(u8, "WindowSaveState");
+    }
+    if (std.mem.indexOf(u8, type_name, "WindowNewTabPosition") != null) {
+        return try alloc.dupe(u8, "WindowNewTabPosition");
+    }
+    if (std.mem.indexOf(u8, type_name, "ShellIntegration") != null) {
+        return try alloc.dupe(u8, "ShellIntegration");
+    }
+    if (std.mem.indexOf(u8, type_name, "MacWindowButtons") != null) {
+        return try alloc.dupe(u8, "MacWindowButtons");
+    }
+    if (std.mem.indexOf(u8, type_name, "MacTitlebarStyle") != null) {
+        return try alloc.dupe(u8, "MacTitlebarStyle");
+    }
+    if (std.mem.indexOf(u8, type_name, "MacAppIcon") != null) {
+        return try alloc.dupe(u8, "MacAppIcon");
+    }
+    if (std.mem.indexOf(u8, type_name, "MacOSDockDropBehavior") != null) {
+        return try alloc.dupe(u8, "MacOSDockDropBehavior");
+    }
+    if (std.mem.indexOf(u8, type_name, "GtkTabsLocation") != null) {
+        return try alloc.dupe(u8, "GtkTabsLocation");
+    }
+    if (std.mem.indexOf(u8, type_name, "GtkSingleInstance") != null) {
+        return try alloc.dupe(u8, "GtkSingleInstance");
+    }
+    
+    // Other Config enums that remain as String for now (could be Swift enums later)
+    if (std.mem.indexOf(u8, type_name, "ConfirmCloseSurface") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: never, always, ask
+    }
+    if (std.mem.indexOf(u8, type_name, "CustomShaderAnimation") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: fade, slide, etc.
+    }
+    if (std.mem.indexOf(u8, type_name, "NonNativeFullscreen") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: native, non_native
+    }
+    if (std.mem.indexOf(u8, type_name, "OptionAsAlt") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: left, right, both, none
+    }
+    if (std.mem.indexOf(u8, type_name, "WindowPaddingColor") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: background, theme, custom
+    }
+    if (std.mem.indexOf(u8, type_name, "WindowSubtitle") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: terminal, process, command
+    }
+    if (std.mem.indexOf(u8, type_name, "LinkPreviews") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: none, hover, always
+    }
+    if (std.mem.indexOf(u8, type_name, "OSCColorReportFormat") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: hex, rgb
+    }
+    if (std.mem.indexOf(u8, type_name, "WindowColorspace") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: srgb, display-p3
+    }
+    if (std.mem.indexOf(u8, type_name, "MacTitlebarProxyIcon") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: visible, hidden, auto
+    }
+    if (std.mem.indexOf(u8, type_name, "MacHidden") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: hide, minimize, quit
+    }
+    if (std.mem.indexOf(u8, type_name, "MacAppIconFrame") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: none, square, round
+    }
+    if (std.mem.indexOf(u8, type_name, "MacShortcuts") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: enabled, disabled
+    }
+    if (std.mem.indexOf(u8, type_name, "GtkToolbarStyle") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: icons, text, both
+    }
+    if (std.mem.indexOf(u8, type_name, "GtkTitlebarStyle") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: system, tabs, hidden
+    }
+    if (std.mem.indexOf(u8, type_name, "MouseShiftCapture") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: never, always, smart
+    }
+    if (std.mem.indexOf(u8, type_name, "WindowShowTabBar") != null) {
+        return try alloc.dupe(u8, "String"); // Could be enum: never, single, multiple
+    }
+    
+    // Legacy mappings for backwards compatibility
     if (std.mem.indexOf(u8, type_name, "WindowDecoration") != null) {
         return try alloc.dupe(u8, "String");
     }
