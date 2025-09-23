@@ -1,6 +1,35 @@
-//! This program is used to generate Swift configuration types from the Zig
-//! configuration file for Ghostty. This allows the macOS app to access
-//! configuration options in a type-safe way.
+//! This program generates Swift configuration types from the Zig configuration file 
+//! for Ghostty. This allows the macOS app to access configuration options in a 
+//! type-safe way.
+//!
+//! ## Architecture
+//! 
+//! The generator works in several phases:
+//! 1. Parse Config.zig to extract field documentation and types
+//! 2. Convert Zig types to appropriate Swift types using type mapping
+//! 3. Generate Swift enums for known configuration enums
+//! 4. Generate Swift struct with optional properties
+//!
+//! ## Adding New Types
+//!
+//! When Config.zig introduces new types that aren't handled, they will default
+//! to `String` type in Swift. To add proper type support:
+//!
+//! ### For Enum Types:
+//! 1. Add enum generation function in the "Swift Enum Generators" section
+//! 2. Call it from `generateConfigurationEnums()`
+//! 3. Add mapping in `handleKnownEnumByName()` to return the enum name
+//!
+//! ### For Struct Types: 
+//! 1. Add mapping in `handleKnownStructByName()` based on type name patterns
+//! 2. Return appropriate Swift type (String, Float, CGSize, etc.)
+//!
+//! ### For Union Types:
+//! 1. Add mapping in `handleKnownUnionByName()` based on type name patterns
+//! 2. Usually map to String for flexibility
+//!
+//! **Note**: Unknown types automatically default to `String` for safety.
+//! Check the generated Swift file for `String` types that should be more specific.
 
 const std = @import("std");
 const assert = std.debug.assert;
@@ -10,10 +39,20 @@ const configpkg = @import("config.zig");
 
 const log = std.log.scoped(.swift_config_gen);
 
+// ============================================================================
+// MARK: - Configuration and Types
+// ============================================================================
+
 /// Configuration for Swift code generation
 const GenerationConfig = struct {
     /// Whether to add 'public' visibility modifiers to generated types
     use_public_visibility: bool = false,
+};
+
+/// Information about adjacent fields that share documentation
+const AdjacentFieldInfo = struct {
+    swift_name: []const u8,
+    swift_type: []const u8,
 };
 
 /// Configuration fields to exclude from Swift generation (macOS-specific filtering)
@@ -33,6 +72,10 @@ pub const GenerateError = error{
     WriteError,
     ParseError,
 };
+
+// ============================================================================
+// MARK: - Main Entry Point
+// ============================================================================
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -56,17 +99,11 @@ pub fn main() !void {
     try generateSwiftFooter(stdout);
 }
 
-fn getSwiftTypeForConfigField(alloc: Allocator, field_name: []const u8) ![]const u8 {
-    // Use comptime to generate a lookup for all config field types
-    inline for (@typeInfo(Config).@"struct".fields) |config_field| {
-        if (std.mem.eql(u8, config_field.name, field_name)) {
-            return try zigTypeToSwiftType(alloc, config_field.type);
-        }
-    }
-    
-    return error.FieldNotFound;
-}
+// ============================================================================
+// MARK: - Swift File Structure Generation
+// ============================================================================
 
+/// Generate the Swift file header with imports and common types
 fn generateSwiftHeader(writer: anytype, config: GenerationConfig) !void {
     const visibility = if (config.use_public_visibility) "public " else "";
     
@@ -92,6 +129,7 @@ fn generateSwiftHeader(writer: anytype, config: GenerationConfig) !void {
     try writer.print("\n/// Configuration options for Ghostty\n{s}struct GhosttyConfig {{\n\n", .{visibility});
 }
 
+/// Generate FontVariation struct and its extensions
 fn generateFontVariation(writer: anytype, visibility: []const u8) !void {
     try writer.print(
         \\/// Font variation axis configuration
@@ -139,6 +177,19 @@ fn generateFontVariation(writer: anytype, visibility: []const u8) !void {
     , .{visibility});
 }
 
+/// Generate the Swift file footer
+fn generateSwiftFooter(writer: anytype) !void {
+    try writer.writeAll(
+        \\}
+        \\
+    );
+}
+
+// ============================================================================
+// MARK: - Swift Enum Generators
+// ============================================================================
+
+/// Generate all configuration enums
 fn generateConfigurationEnums(writer: anytype, visibility: []const u8) !void {
     try generateCursorStyleEnum(writer, visibility);
     try generateFontEnums(writer, visibility);
@@ -349,13 +400,11 @@ fn generateGtkEnums(writer: anytype, visibility: []const u8) !void {
     , .{ visibility, visibility });
 }
 
-fn generateSwiftFooter(writer: anytype) !void {
-    try writer.writeAll(
-        \\}
-        \\
-    );
-}
+// ============================================================================
+// MARK: - Config Field Processing
+// ============================================================================
 
+/// Process all configuration fields from Config.zig
 fn genConfigFields(alloc: Allocator, writer: anytype, config: GenerationConfig) !void {
     var ast = std.zig.Ast.parse(alloc, @embedFile("config/Config.zig"), .zig) catch |err| {
         log.err("failed to parse Config.zig: {}", .{err});
@@ -378,78 +427,19 @@ fn genConfigFields(alloc: Allocator, writer: anytype, config: GenerationConfig) 
     }
 }
 
-fn extractFieldName(raw_name: []const u8) []const u8 {
-    return if (raw_name[0] == '@') 
-        raw_name[2 .. raw_name.len - 1] 
-    else 
-        raw_name;
-}
-
-fn findNextFieldIdentifier(tokens: []std.zig.Token.Tag, start_idx: usize) ?usize {
-    var idx = start_idx;
-    
-    // Skip to next identifier
-    while (idx < tokens.len and tokens[idx] != .identifier) {
-        idx += 1;
-    }
-    if (idx >= tokens.len) return null;
-
-    // Check if this identifier is preceded by a doc comment (meaning it's a new field group)
-    if (idx > 0 and tokens[idx - 1] == .doc_comment) {
-        return null; // This is the start of a new documentation block
-    }
-
-    // Check if this identifier is a field (followed by colon within a few tokens)
-    for (idx + 1..@min(idx + 4, tokens.len)) |check_idx| {
-        if (tokens[check_idx] == .colon) {
-            return idx;
+/// Get Swift type for a specific config field name
+fn getSwiftTypeForConfigField(alloc: Allocator, field_name: []const u8) ![]const u8 {
+    // Use comptime to generate a lookup for all config field types
+    inline for (@typeInfo(Config).@"struct".fields) |config_field| {
+        if (std.mem.eql(u8, config_field.name, field_name)) {
+            return try zigTypeToSwiftType(alloc, config_field.type);
         }
     }
     
-    // Not a field, keep searching
-    return findNextFieldIdentifier(tokens, idx + 1);
+    return error.FieldNotFound;
 }
 
-fn generateSwiftDeclarations(alloc: Allocator, writer: anytype, fields: []const AdjacentFieldInfo, config: GenerationConfig) !void {
-    var type_to_names = std.StringHashMap(std.ArrayList([]const u8)).init(alloc);
-    defer {
-        var iter = type_to_names.iterator();
-        while (iter.next()) |entry| {
-            entry.value_ptr.deinit();
-        }
-        type_to_names.deinit();
-    }
-
-    for (fields) |field| {
-        const result = try type_to_names.getOrPut(field.swift_type);
-        if (!result.found_existing) {
-            result.value_ptr.* = std.ArrayList([]const u8).init(alloc);
-        }
-        try result.value_ptr.append(field.swift_name);
-    }
-
-    const visibility = if (config.use_public_visibility) "public " else "";
-    
-    var iter = type_to_names.iterator();
-    while (iter.next()) |entry| {
-        const type_name = entry.key_ptr.*;
-        const names = entry.value_ptr.items;
-        
-        try writer.print("    {s}var ", .{visibility});
-        for (names, 0..) |field_name, idx| {
-            if (idx > 0) try writer.writeAll(", ");
-            try writer.writeAll(field_name);
-        }
-        try writer.writeAll(": ");
-        try writer.writeAll(type_name);
-        // Always use optional here, for easier initialization
-        const optional_suffix = if (std.mem.endsWith(u8, type_name, "?")) "" else "?";
-        try writer.writeAll(optional_suffix);
-        try writer.writeAll("\n");
-    }
-    try writer.writeAll("\n");
-}
-
+/// Generate a single config field and its adjacent fields
 fn genConfigField(
     alloc: Allocator,
     writer: anytype,
@@ -528,11 +518,44 @@ fn genConfigField(
     }
 }
 
-const AdjacentFieldInfo = struct {
-    swift_name: []const u8,
-    swift_type: []const u8,
-};
+// ============================================================================
+// MARK: - AST Parsing Helpers
+// ============================================================================
 
+/// Extract field name from raw AST identifier (handles @"field-name" syntax)
+fn extractFieldName(raw_name: []const u8) []const u8 {
+    return if (raw_name[0] == '@') 
+        raw_name[2 .. raw_name.len - 1] 
+    else 
+        raw_name;
+}
+
+fn findNextFieldIdentifier(tokens: []std.zig.Token.Tag, start_idx: usize) ?usize {
+    var idx = start_idx;
+    
+    // Skip to next identifier
+    while (idx < tokens.len and tokens[idx] != .identifier) {
+        idx += 1;
+    }
+    if (idx >= tokens.len) return null;
+
+    // Check if this identifier is preceded by a doc comment (meaning it's a new field group)
+    if (idx > 0 and tokens[idx - 1] == .doc_comment) {
+        return null; // This is the start of a new documentation block
+    }
+
+    // Check if this identifier is a field (followed by colon within a few tokens)
+    for (idx + 1..@min(idx + 4, tokens.len)) |check_idx| {
+        if (tokens[check_idx] == .colon) {
+            return idx;
+        }
+    }
+    
+    // Not a field, keep searching
+    return findNextFieldIdentifier(tokens, idx + 1);
+}
+
+/// Extract documentation comments from AST tokens
 fn extractDocComments(
     alloc: Allocator,
     ast: std.zig.Ast,
@@ -571,6 +594,7 @@ fn extractDocComments(
     return buffer.toOwnedSlice();
 }
 
+/// Find common whitespace prefix in documentation lines
 fn findCommonPrefix(lines: std.ArrayList([]const u8)) usize {
     var m: usize = std.math.maxInt(usize);
     for (lines.items) |line| {
@@ -584,6 +608,50 @@ fn findCommonPrefix(lines: std.ArrayList([]const u8)) usize {
         m = @min(m, n);
     }
     return m;
+}
+
+// ============================================================================
+// MARK: - Name Conversion Utilities
+// ============================================================================
+
+fn generateSwiftDeclarations(alloc: Allocator, writer: anytype, fields: []const AdjacentFieldInfo, config: GenerationConfig) !void {
+    var type_to_names = std.StringHashMap(std.ArrayList([]const u8)).init(alloc);
+    defer {
+        var iter = type_to_names.iterator();
+        while (iter.next()) |entry| {
+            entry.value_ptr.deinit();
+        }
+        type_to_names.deinit();
+    }
+
+    for (fields) |field| {
+        const result = try type_to_names.getOrPut(field.swift_type);
+        if (!result.found_existing) {
+            result.value_ptr.* = std.ArrayList([]const u8).init(alloc);
+        }
+        try result.value_ptr.append(field.swift_name);
+    }
+
+    const visibility = if (config.use_public_visibility) "public " else "";
+    
+    var iter = type_to_names.iterator();
+    while (iter.next()) |entry| {
+        const type_name = entry.key_ptr.*;
+        const names = entry.value_ptr.items;
+        
+        try writer.print("    {s}var ", .{visibility});
+        for (names, 0..) |field_name, idx| {
+            if (idx > 0) try writer.writeAll(", ");
+            try writer.writeAll(field_name);
+        }
+        try writer.writeAll(": ");
+        try writer.writeAll(type_name);
+        // Always use optional here, for easier initialization
+        const optional_suffix = if (std.mem.endsWith(u8, type_name, "?")) "" else "?";
+        try writer.writeAll(optional_suffix);
+        try writer.writeAll("\n");
+    }
+    try writer.writeAll("\n");
 }
 
 fn convertToSwiftName(alloc: Allocator, zig_name: []const u8) ![]const u8 {
@@ -643,6 +711,13 @@ fn isSwiftReservedKeyword(name: []const u8) bool {
     return false;
 }
 
+// ============================================================================
+// MARK: - Type Mapping System  
+// ============================================================================
+// This section handles converting Zig types to appropriate Swift types.
+// When adding support for new types, modify the appropriate handler function.
+
+/// Main type conversion function - converts Zig types to Swift types
 fn zigTypeToSwiftType(alloc: Allocator, comptime T: type) ![]const u8 {
     // Handle special Ghostty config types first
     if (T == configpkg.RepeatableFontVariation) {
@@ -718,10 +793,31 @@ fn zigTypeToSwiftType(alloc: Allocator, comptime T: type) ![]const u8 {
             const type_name = @typeName(T);
             return try handleKnownStructByName(alloc, type_name);
         },
+        .@"union" => {
+            // Check if this is a known union type by name
+            const type_name = @typeName(T);
+            return try handleKnownUnionByName(alloc, type_name);
+        },
         else => try alloc.dupe(u8, "String"),
     };
 }
 
+/// Handle union types by name pattern matching
+/// Add new union type mappings here when Config.zig introduces them
+fn handleKnownUnionByName(alloc: Allocator, type_name: []const u8) ![]const u8 {
+    // FontStyle union type - can be default, false, or a named style
+    if (std.mem.indexOf(u8, type_name, "FontStyle") != null) {
+        return try alloc.dupe(u8, "String"); // Use String for flexibility
+    }
+    
+    // Other known union types can be added here
+    
+    // Default for unknown unions - use String for safety
+    return try alloc.dupe(u8, "String");
+}
+
+/// Handle enum types by name pattern matching
+/// Add new enum type mappings here when Config.zig introduces them
 fn handleKnownEnumByName(alloc: Allocator, type_name: []const u8) ![]const u8 {
     // Basic UI enums we generate
     if (std.mem.indexOf(u8, type_name, "CursorStyle") != null) {
@@ -855,6 +951,8 @@ fn handleKnownEnumByName(alloc: Allocator, type_name: []const u8) ![]const u8 {
     return try alloc.dupe(u8, "String");
 }
 
+/// Handle struct types by name pattern matching  
+/// Add new struct type mappings here when Config.zig introduces them
 fn handleKnownStructByName(alloc: Allocator, type_name: []const u8) ![]const u8 {
     // Color types - represent as UInt32 for RGB hex values
     if (std.mem.endsWith(u8, type_name, ".Color") or std.mem.eql(u8, type_name, "Color")) {
@@ -946,6 +1044,10 @@ fn handleKnownStructByName(alloc: Allocator, type_name: []const u8) ![]const u8 
     // Default for unknown structs - use String as it's the most common config type
     return try alloc.dupe(u8, "String");
 }
+
+// ============================================================================
+// MARK: - Tests
+// ============================================================================
 
 test "convertToSwiftName" {
     const testing = std.testing;
