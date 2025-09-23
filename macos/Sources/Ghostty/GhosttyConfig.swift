@@ -92,7 +92,7 @@ public struct GhosttyConfig {
     /// this within config files if you want to clear previously set values in
     /// configuration files or on the CLI if you want to clear values set on the
     /// CLI.
-    public let fontFamily: [String]
+    public let fontFamily, fontFamilyBold, fontFamilyItalic, fontFamilyBoldItalic: [String]
 
     /// The named font style to use for each of the requested terminal font styles.
     /// This looks up the style based on the font style string advertised by the
@@ -106,7 +106,7 @@ public struct GhosttyConfig {
     /// These are only valid if its corresponding font-family is also specified. If
     /// no font-family is specified, then the font-style is ignored unless you're
     /// disabling the font style.
-    public let fontStyle: Any
+    public let fontStyle, fontStyleBold, fontStyleItalic, fontStyleBoldItalic: Any
 
     /// Control whether Ghostty should synthesize a style if the requested style is
     /// not available in the specified font-family.
@@ -200,7 +200,7 @@ public struct GhosttyConfig {
     /// 
     /// Common axes are: `wght` (weight), `slnt` (slant), `ital` (italic), `opsz`
     /// (optical size), `wdth` (width), `GRAD` (gradient), etc.
-    public let fontVariation: [FontVariation]
+    public let fontVariation, fontVariationBold, fontVariationItalic, fontVariationBoldItalic: [FontVariation]
 
     /// Force one or a range of Unicode codepoints to map to a specific named font.
     /// This is useful if you want to support special symbols or if you want to use
@@ -311,7 +311,7 @@ public struct GhosttyConfig {
     /// 
     ///   * Powerline glyphs will be adjusted along with the cell height so
     ///     that things like status lines continue to look aligned.
-    public let adjustCellWidth: Any?
+    public let adjustCellWidth, adjustCellHeight: Any?
 
     /// Distance in pixels or percentage adjustment from the bottom of the cell to the text baseline.
     /// Increase to move baseline UP, decrease to move baseline DOWN.
@@ -593,7 +593,7 @@ public struct GhosttyConfig {
     /// Since version 1.2.0, this can also be set to `cell-foreground` to match
     /// the cell foreground color, or `cell-background` to match the cell
     /// background color.
-    public let selectionForeground: Any?
+    public let selectionForeground, selectionBackground: Any?
 
     /// Whether to clear selected text when typing. This defaults to `true`.
     /// This is typical behavior for most terminal emulators as well as
@@ -1611,7 +1611,7 @@ public struct GhosttyConfig {
     /// `window-decoration`), then this will work as expected.
     /// 
     /// Windows smaller than 10 wide by 4 high are not allowed.
-    public let windowHeight: UInt32
+    public let windowHeight, windowWidth: UInt32
 
     /// The starting window position. This position is in pixels and is relative
     /// to the top-left corner of the primary monitor. Both values must be set to take
@@ -1636,7 +1636,7 @@ public struct GhosttyConfig {
     /// Note: this is only supported on macOS. The GTK runtime does not support
     /// setting the window position, as windows are only allowed position
     /// themselves in X11 and not Wayland.
-    public let windowPositionX: Int16?
+    public let windowPositionX, windowPositionY: Int16?
 
     /// Whether to enable saving and restoring window state. Window state includes
     /// their position, size, tabs, splits, etc. Some window state requires shell
@@ -1799,7 +1799,7 @@ public struct GhosttyConfig {
     ///   * `allow`
     ///   * `deny`
     /// 
-    public let clipboardRead: Int
+    public let clipboardRead, clipboardWrite: Int
 
     /// Trims trailing whitespace on data that is copied to the clipboard. This does
     /// not affect data sent to the clipboard via `clipboard-write`.

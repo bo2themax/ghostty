@@ -42,6 +42,17 @@ pub fn main() !void {
     try generateSwiftFooter(stdout);
 }
 
+fn getSwiftTypeForConfigField(alloc: Allocator, field_name: []const u8) ![]const u8 {
+    // Use comptime to generate a lookup for all config field types
+    inline for (@typeInfo(Config).@"struct".fields) |config_field| {
+        if (std.mem.eql(u8, config_field.name, field_name)) {
+            return try zigTypeToSwiftType(alloc, config_field.type);
+        }
+    }
+    
+    return error.FieldNotFound;
+}
+
 fn generateSwiftHeader(writer: anytype) !void {
     try writer.writeAll(
         \\// THIS FILE IS AUTO GENERATED
@@ -108,8 +119,9 @@ fn genConfigFields(alloc: Allocator, writer: anytype) !void {
     };
     defer ast.deinit(alloc);
 
+    // Simple approach: generate fields individually like helpgen.zig
+    // but use a smarter grouping in the Swift output
     inline for (@typeInfo(Config).@"struct".fields) |field| {
-        // Skip private fields (prefixed with underscore)
         if (field.name[0] == '_') continue;
 
         // Check if field is in the filtered list
@@ -125,9 +137,75 @@ fn genConfigFields(alloc: Allocator, writer: anytype) !void {
 
         genConfigField(alloc, writer, ast, field) catch |err| {
             log.warn("failed to generate field '{s}': {}", .{ field.name, err });
-            // Continue to next field instead of using continue in catch block
         };
     }
+}
+
+fn extractFieldName(raw_name: []const u8) []const u8 {
+    return if (raw_name[0] == '@') 
+        raw_name[2 .. raw_name.len - 1] 
+    else 
+        raw_name;
+}
+
+fn findNextFieldIdentifier(tokens: []std.zig.Token.Tag, start_idx: usize) ?usize {
+    var idx = start_idx;
+    
+    // Skip to next identifier
+    while (idx < tokens.len and tokens[idx] != .identifier) {
+        idx += 1;
+    }
+    if (idx >= tokens.len) return null;
+
+    // Check if this identifier is preceded by a doc comment (meaning it's a new field group)
+    if (idx > 0 and tokens[idx - 1] == .doc_comment) {
+        return null; // This is the start of a new documentation block
+    }
+
+    // Check if this identifier is a field (followed by colon within a few tokens)
+    for (idx + 1..@min(idx + 4, tokens.len)) |check_idx| {
+        if (tokens[check_idx] == .colon) {
+            return idx;
+        }
+    }
+    
+    // Not a field, keep searching
+    return findNextFieldIdentifier(tokens, idx + 1);
+}
+
+fn generateSwiftDeclarations(alloc: Allocator, writer: anytype, fields: []const AdjacentFieldInfo) !void {
+    var type_to_names = std.StringHashMap(std.ArrayList([]const u8)).init(alloc);
+    defer {
+        var iter = type_to_names.iterator();
+        while (iter.next()) |entry| {
+            entry.value_ptr.deinit();
+        }
+        type_to_names.deinit();
+    }
+
+    for (fields) |field| {
+        const result = try type_to_names.getOrPut(field.swift_type);
+        if (!result.found_existing) {
+            result.value_ptr.* = std.ArrayList([]const u8).init(alloc);
+        }
+        try result.value_ptr.append(field.swift_name);
+    }
+
+    var iter = type_to_names.iterator();
+    while (iter.next()) |entry| {
+        const type_name = entry.key_ptr.*;
+        const names = entry.value_ptr.items;
+        
+        try writer.writeAll("    public let ");
+        for (names, 0..) |field_name, idx| {
+            if (idx > 0) try writer.writeAll(", ");
+            try writer.writeAll(field_name);
+        }
+        try writer.writeAll(": ");
+        try writer.writeAll(type_name);
+        try writer.writeAll("\n");
+    }
+    try writer.writeAll("\n");
 }
 
 fn genConfigField(
@@ -143,7 +221,7 @@ fn genConfigField(
         if (i == 0 or tokens[i - 1] != .doc_comment) continue;
 
         const name = ast.tokenSlice(@intCast(i));
-        const key = if (name[0] == '@') name[2 .. name.len - 1] else name;
+        const key = extractFieldName(name);
         if (!std.mem.eql(u8, key, field.name)) continue;
 
         const comment = extractDocComments(alloc, ast, @intCast(i - 1), tokens) catch |err| {
@@ -152,27 +230,65 @@ fn genConfigField(
         };
         defer alloc.free(comment);
 
+        // Find all adjacent fields that share this documentation
+        var adjacent_fields = std.ArrayList(AdjacentFieldInfo).init(alloc);
+        defer {
+            for (adjacent_fields.items) |item| {
+                alloc.free(item.swift_name);
+                alloc.free(item.swift_type);
+            }
+            adjacent_fields.deinit();
+        }
+
+        // Add the current field
+        const swift_name = try convertToSwiftName(alloc, field.name);
+        const swift_type = try zigTypeToSwiftType(alloc, field.type);
+        try adjacent_fields.append(.{
+            .swift_name = swift_name,
+            .swift_type = swift_type,
+        });
+
+        // Look for adjacent fields that follow immediately after this one
+        var search_idx = i + 1;
+        while (search_idx < tokens.len) {
+            search_idx = findNextFieldIdentifier(tokens, search_idx) orelse break;
+
+            const next_field_name_raw = ast.tokenSlice(@intCast(search_idx));
+            const next_field_name = extractFieldName(next_field_name_raw);
+
+            // Skip private fields
+            if (next_field_name[0] == '_') {
+                search_idx += 1;
+                continue;
+            }
+
+            // Check if this field exists in Config and get its type
+            const next_swift_type = getSwiftTypeForConfigField(alloc, next_field_name) catch {
+                search_idx += 1;
+                continue;
+            };
+
+            const next_swift_name = try convertToSwiftName(alloc, next_field_name);
+            try adjacent_fields.append(.{
+                .swift_name = next_swift_name,
+                .swift_type = next_swift_type,
+            });
+
+            search_idx += 1;
+        }
+
+        // Generate Swift output - group by type for adjacent declaration
         try writer.writeAll(comment);
-        try writer.writeAll("    public let ");
-
-        const swift_name = convertToSwiftName(alloc, field.name) catch |err| {
-            log.warn("failed to convert field name '{s}' to Swift: {}", .{ field.name, err });
-            return err;
-        };
-        defer alloc.free(swift_name);
-        try writer.writeAll(swift_name);
-        try writer.writeAll(": ");
-
-        const swift_type = zigTypeToSwiftType(alloc, field.type) catch |err| {
-            log.warn("failed to convert type for field '{s}' to Swift: {}", .{ field.name, err });
-            return err;
-        };
-        defer alloc.free(swift_type);
-        try writer.writeAll(swift_type);
-        try writer.writeAll("\n\n");
+        try generateSwiftDeclarations(alloc, writer, adjacent_fields.items);
+        
         break;
     }
 }
+
+const AdjacentFieldInfo = struct {
+    swift_name: []const u8,
+    swift_type: []const u8,
+};
 
 fn extractDocComments(
     alloc: Allocator,
