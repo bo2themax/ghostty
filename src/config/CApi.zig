@@ -76,6 +76,15 @@ export fn ghostty_config_load_recursive_files(self: *Config) void {
     };
 }
 
+/// Load the configuration from a specific file path.
+/// The path must be null-terminated.
+export fn ghostty_config_load_file(self: *Config, path: [*:0]const u8) void {
+    const path_slice = std.mem.span(path);
+    self.loadFile(state.alloc, path_slice) catch |err| {
+        log.err("error loading config from file path={s} err={}", .{ path_slice, err });
+    };
+}
+
 export fn ghostty_config_finalize(self: *Config) void {
     self.finalize() catch |err| {
         log.err("error finalizing config err={}", .{err});
@@ -131,6 +140,80 @@ export fn ghostty_config_open_path() c.String {
     };
 
     return .fromSlice(path);
+}
+
+/// Set a specific configuration key-value pair in memory.
+/// Both key and value must be null-terminated strings.
+/// Example: ghostty_config_set(config, "font-size", "14");
+/// This modifies the config in-place.
+export fn ghostty_config_set(self: *Config, key: [*:0]const u8, value: [*:0]const u8) void {
+    const key_slice = std.mem.span(key);
+    const value_slice = std.mem.span(value);
+
+    // Create a temporary argument in the format "--key=value"
+    var buf: [512]u8 = undefined;
+    const arg = std.fmt.bufPrint(&buf, "--{s}={s}", .{ key_slice, value_slice }) catch |err| {
+        log.err("error formatting config argument key={s} value={s} err={}", .{ key_slice, value_slice, err });
+        return;
+    };
+
+    // Create an iterator that yields this single argument
+    const args = [_][]const u8{arg};
+    var simple_iter = SimpleIterator{ .items = &args, .index = 0 };
+
+    self.loadIter(state.alloc, &simple_iter) catch |err| {
+        log.err("error setting config key={s} value={s} err={}", .{ key_slice, value_slice, err });
+    };
+}
+
+// Helper iterator for ghostty_config_set
+const SimpleIterator = struct {
+    items: []const []const u8,
+    index: usize,
+
+    pub fn next(self: *SimpleIterator) ?[]const u8 {
+        if (self.index >= self.items.len) return null;
+        const result = self.items[self.index];
+        self.index += 1;
+        return result;
+    }
+};
+
+/// Export the configuration to a string.
+/// Returns null-terminated string on success, empty string on error.
+/// The returned string must be freed with ghostty_string_free.
+export fn ghostty_config_export_string(config: *Config) c.String {
+    // Safety check: ensure config pointer is valid
+    if (@intFromPtr(config) == 0) {
+        log.err("config pointer is null in ghostty_config_export_string", .{});
+        return .empty;
+    }
+
+    // Use the existing show_config.zig approach which we know works
+    var buf = std.ArrayList(u8).init(state.alloc);
+    defer buf.deinit();
+
+    // Try the same approach as show_config.zig
+    const writer = buf.writer();
+    const formatter = @import("formatter.zig").FileFormatter{
+        .alloc = state.alloc,
+        .config = config,
+        .docs = false,
+        .changed = false,
+    };
+
+    // Instead of calling format directly, let's try using std.fmt.format like show_config.zig does
+    std.fmt.format(writer, "{}", .{formatter}) catch |err| {
+        log.err("error formatting config err={}", .{err});
+        return .empty;
+    };
+
+    const result = state.alloc.dupeZ(u8, buf.items) catch |err| {
+        log.err("error duplicating config string err={}", .{err});
+        return .empty;
+    };
+
+    return .fromSlice(result);
 }
 
 /// Sync with ghostty_diagnostic_s
