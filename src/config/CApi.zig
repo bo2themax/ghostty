@@ -189,12 +189,10 @@ export fn ghostty_config_export_string(config: *Config) c.String {
         return .empty;
     }
 
-    // Use the existing show_config.zig approach which we know works
-    var buf = std.ArrayList(u8).init(state.alloc);
-    defer buf.deinit();
+    var stdout: std.fs.File = .stdout();
+    var buffer: [4096]u8 = undefined;
+    var stdout_writer = stdout.writer(&buffer);
 
-    // Try the same approach as show_config.zig
-    const writer = buf.writer();
     const formatter = @import("formatter.zig").FileFormatter{
         .alloc = state.alloc,
         .config = config,
@@ -202,13 +200,16 @@ export fn ghostty_config_export_string(config: *Config) c.String {
         .changed = false,
     };
 
-    // Instead of calling format directly, let's try using std.fmt.format like show_config.zig does
-    std.fmt.format(writer, "{}", .{formatter}) catch |err| {
-        log.err("error formatting config err={}", .{err});
+    formatter.format(&stdout_writer.interface) catch |err| {
+        log.err("error formatting config string err={}", .{err});
+        return .empty;
+    };
+    stdout_writer.end() catch |err| {
+        log.err("error writing config string err={}", .{err});
         return .empty;
     };
 
-    const result = state.alloc.dupeZ(u8, buf.items) catch |err| {
+    const result = state.alloc.dupeZ(u8, &buffer) catch |err| {
         log.err("error duplicating config string err={}", .{err});
         return .empty;
     };

@@ -429,6 +429,19 @@ typedef struct {
 } ghostty_surface_config_s;
 
 typedef struct {
+  u_int32_t location;
+  const char* theme;
+  uintptr_t theme_len;
+  const char* path;
+  uintptr_t path_len;
+} ghostty_surface_theme_s;
+
+typedef struct {
+  const ghostty_surface_theme_s* themes;
+  size_t len;
+} ghostty_surface_theme_list_s;
+
+typedef struct {
   uint16_t columns;
   uint16_t rows;
   uint32_t width_px;
@@ -970,6 +983,9 @@ void ghostty_surface_set_focus(ghostty_surface_t, bool);
 void ghostty_surface_set_occlusion(ghostty_surface_t, bool);
 void ghostty_surface_set_size(ghostty_surface_t, uint32_t, uint32_t);
 ghostty_surface_size_s ghostty_surface_size(ghostty_surface_t);
+uint32_t ghostty_surface_total_content_rows(ghostty_surface_t);
+float ghostty_surface_scale_factor_x(ghostty_surface_t);
+float ghostty_surface_scale_factor_y(ghostty_surface_t);
 void ghostty_surface_set_color_scheme(ghostty_surface_t,
                                       ghostty_color_scheme_e);
 ghostty_input_mods_e ghostty_surface_key_translation_mods(ghostty_surface_t,
@@ -1013,6 +1029,8 @@ bool ghostty_surface_read_text(ghostty_surface_t,
                                ghostty_selection_s,
                                ghostty_text_s*);
 void ghostty_surface_free_text(ghostty_surface_t, ghostty_text_s*);
+bool ghostty_surface_get_themes(ghostty_surface_t, ghostty_surface_theme_list_s*);
+bool ghostty_surface_show_theme(ghostty_surface_t, ghostty_surface_theme_s);
 
 #ifdef __APPLE__
 void ghostty_surface_set_display_id(ghostty_surface_t, uint32_t);

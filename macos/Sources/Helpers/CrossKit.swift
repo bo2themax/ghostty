@@ -28,6 +28,11 @@ extension OSViewRepresentable {
     }
 }
 
+extension OSSize {
+    static var screenScale: CGFloat {
+        NSScreen.main!.backingScaleFactor
+    }
+}
 #elseif canImport(UIKit)
 
 import UIKit
@@ -53,4 +58,9 @@ extension OSViewRepresentable {
     }
 }
 
+extension OSSize {
+    static var screenScale: CGFloat {
+        UIScreen.main.scale
+    }
+}
 #endif

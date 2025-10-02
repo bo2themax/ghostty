@@ -24,6 +24,7 @@ class AppDelegate: NSObject,
     @IBOutlet private var menuCheckForUpdates: NSMenuItem?
     @IBOutlet private var menuOpenConfig: NSMenuItem?
     @IBOutlet private var menuReloadConfig: NSMenuItem?
+    @IBOutlet private var menuThemePreview: NSMenuItem?
     @IBOutlet private var menuSecureInput: NSMenuItem?
     @IBOutlet private var menuQuit: NSMenuItem?
 
@@ -264,6 +265,7 @@ class AppDelegate: NSObject,
 
         // Setup our menu
         setupMenuImages()
+        setupThemePreviewMenu()
 
         // Setup signal handlers
         setupSignals()
@@ -1007,6 +1009,50 @@ class AppDelegate: NSObject,
         UserDefaults.standard.set(input.global, forKey: "SecureInput")
     }
 
+    private func showThemePreviewWindow() {
+        // Create and show a window with the theme preview
+        let themePreviewWindow = ThemePreviewWindow(ghosttyApp: ghostty)
+        themePreviewWindow.makeKeyAndOrderFront(nil)
+    }
+
+    private func setupThemePreviewMenu() {
+        // Add the theme preview menu item programmatically if it doesn't exist
+        guard let mainMenu = NSApplication.shared.mainMenu else { return }
+        
+        // Find the "File" menu or create it if it doesn't exist
+        var fileMenu: NSMenu?
+        for menuItem in mainMenu.items {
+            if menuItem.title == "File" || menuItem.title.contains("File") {
+                fileMenu = menuItem.submenu
+                break
+            }
+        }
+        
+        // If we found a file menu, add the theme preview item
+        if let fileMenu = fileMenu {
+            // Check if the item already exists
+            let existingItem = fileMenu.items.first { $0.title == "Theme Preview..." }
+            if existingItem == nil {
+                // Add separator before our item if the menu isn't empty
+                if !fileMenu.items.isEmpty {
+                    fileMenu.addItem(NSMenuItem.separator())
+                }
+                
+                // Create and add the theme preview menu item
+                let themePreviewMenuItem = NSMenuItem(
+                    title: "Theme Preview...",
+                    action: #selector(showThemePreview(_:)),
+                    keyEquivalent: ""
+                )
+                themePreviewMenuItem.target = self
+                fileMenu.addItem(themePreviewMenuItem)
+                
+                // Store reference for potential later use
+                menuThemePreview = themePreviewMenuItem
+            }
+        }
+    }
+
     //MARK: - IB Actions
 
     @IBAction func openConfig(_ sender: Any?) {
@@ -1015,6 +1061,10 @@ class AppDelegate: NSObject,
 
     @IBAction func reloadConfig(_ sender: Any?) {
         ghostty.reloadConfig()
+    }
+
+    @IBAction func showThemePreview(_ sender: Any?) {
+        showThemePreviewWindow()
     }
 
     @IBAction func checkForUpdates(_ sender: Any?) {
