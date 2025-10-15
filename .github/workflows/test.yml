@@ -45,5 +45,7 @@ jobs:
       - name: Enable Automation mode
         run: sudo automationmodetool enable-automationmode-without-authentication
 
-      - name: test
-        run: zig build test
+      - name: Build
+        run: zig build -Demit-macos-app=false
+      - name: Test
+        run: cd macos && xcodebuild test -scheme Ghostty -arch arm64
