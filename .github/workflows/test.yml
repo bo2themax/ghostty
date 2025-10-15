@@ -467,6 +467,9 @@ jobs:
 
       - name: Xcode Select
         run: sudo xcode-select -s /Applications/Xcode_26.0.app
+      # https://developer.apple.com/forums/thread/693850?answerId=694516022#694516022
+      - name: Enable Automation mode
+        run: sudo automationmodetool enable-automationmode-without-authentication
 
       - name: Xcode Version
         run: xcodebuild -version
