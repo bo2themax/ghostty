@@ -407,7 +407,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos:
-    runs-on: namespace-profile-ghostty-macos-tahoe
+    runs-on: macos-latest
     needs: test
     steps:
       - name: Checkout code
@@ -450,7 +450,7 @@ jobs:
           xcodebuild -target Ghostty-iOS "CODE_SIGNING_ALLOWED=NO"
 
   build-macos-matrix:
-    runs-on: namespace-profile-ghostty-macos-tahoe
+    runs-on: macos-latest
     needs: test
     steps:
       - name: Checkout code
@@ -726,7 +726,7 @@ jobs:
           nix develop -c zig build -Dsentry=${{ matrix.sentry }}
 
   test-macos:
-    runs-on: namespace-profile-ghostty-macos-tahoe
+    runs-on: macos-latest
     needs: test
     steps:
       - name: Checkout code
