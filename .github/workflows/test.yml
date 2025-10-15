@@ -50,4 +50,4 @@ jobs:
       - name: Build
         run: zig build -Demit-macos-app=false
       - name: Test
-        run: cd macos && xcodebuild test -scheme Ghostty -arch arm64
+        run: cd macos && xcodebuild test -scheme Ghostty
