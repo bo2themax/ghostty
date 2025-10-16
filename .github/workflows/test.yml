@@ -37,7 +37,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install Zig
-        run: brew install zig
+        run: brew install zig && gem install xcpretty
       - name: Xcode Select
         run: sudo xcode-select -s /Applications/Xcode_26.0.app
       - name: Clean DerivedData
@@ -45,8 +45,8 @@ jobs:
       - name: Xcode Version
         run: xcodebuild -version
       # - name: Enable Automation mode
-      #   run: sudo automationmodetool enable-automationmode-without-authentication
+      #   run: automationmodetool enable-automationmode-without-authentication
       - name: Build
         run: zig build -Demit-macos-app=false
       - name: Test
-        run: cd macos && xcodebuild test -scheme Ghostty
+        run: cd macos && xcodebuild test -scheme Ghostty | xcpretty
