@@ -44,9 +44,8 @@ jobs:
         run: rm -rf ~/Library/Developer/Xcode/DerivedData/*
       - name: Xcode Version
         run: xcodebuild -version
-      - name: Enable Automation mode
-        run: sudo automationmodetool enable-automationmode-without-authentication
-
+      # - name: Enable Automation mode
+      #   run: sudo automationmodetool enable-automationmode-without-authentication
       - name: Build
         run: zig build -Demit-macos-app=false
       - name: Test
