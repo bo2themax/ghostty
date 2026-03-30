@@ -7247,7 +7247,18 @@ pub const Keybinds = struct {
             // allocated value). This isn't a memory leak because the arena
             // will be freed when the config is freed.
             log.info("config has 'keybind = clear', all keybinds cleared", .{});
+
+            // Snapshot previously-bound triggers
+            // before the reset so we can re-record them as unbound.
+            // Consumers (e.g. the macOS menu shortcut manager) use this
+            // to know which triggers must be explicitly unbound.
+            // Previously-unbound triggers will be cleared, that's what `keybind=clear` is for
+            const cleared_triggers = self.set.reverse.values();
+
             self.set = .{};
+            for (cleared_triggers) |trigger| {
+                try self.set.unbound_triggers.put(alloc, trigger, {});
+            }
             self.tables = .empty;
             self.chain_target = .root;
             return;
@@ -7952,16 +7963,37 @@ pub const Keybinds = struct {
         try keybinds.parseCLI(alloc, "shift+a=copy_to_clipboard");
         try keybinds.parseCLI(alloc, "foo/shift+b=paste_from_clipboard");
         try keybinds.parseCLI(alloc, "bar/ctrl+c=close_window");
+        try keybinds.parseCLI(alloc, "shift+d=unbind");
 
         try testing.expectEqual(1, keybinds.set.bindings.count());
         try testing.expectEqual(2, keybinds.tables.count());
+        try testing.expect(!keybinds.set.isUnbound(.{ .key = .{ .unicode = 'a' }, .mods = .{ .shift = true } }));
 
         // Clear all keybinds
         try keybinds.parseCLI(alloc, "clear");
+        try testing.expectEqual(1, keybinds.set.unbound_triggers.count());
+
+        try testing.expect(keybinds.set.isUnbound(.{ .key = .{ .unicode = 'a' }, .mods = .{ .shift = true } }));
+        // Previously unbound triggers should be cleared
+        try testing.expect(!keybinds.set.isUnbound(.{ .key = .{ .unicode = 'd' }, .mods = .{ .shift = true } }));
+
+        // Triggers not in ReversMap should NOT be marked as unbound
+        try testing.expect(!keybinds.set.isUnbound(.{ .key = .{ .unicode = 'b' }, .mods = .{ .shift = true } }));
+        try testing.expect(!keybinds.set.isUnbound(.{ .key = .{ .unicode = 'c' }, .mods = .{ .ctrl = true } }));
 
         // Both root set and tables should be cleared
         try testing.expectEqual(0, keybinds.set.bindings.count());
         try testing.expectEqual(0, keybinds.tables.count());
+
+        // Add back some bindings
+        try keybinds.parseCLI(alloc, "shift+a=copy_to_clipboard");
+        try testing.expectEqual(1, keybinds.set.bindings.count());
+        try testing.expectEqual(0, keybinds.tables.count());
+
+        // unbind is overrode by copy_to_clipboard
+        try testing.expectEqual(0, keybinds.set.unbound_triggers.count());
+        try testing.expect(!keybinds.set.isUnbound(.{ .key = .{ .unicode = 'a' }, .mods = .{ .shift = true } }));
+        try testing.expect(!keybinds.set.isUnbound(.{ .key = .{ .unicode = 'd' }, .mods = .{ .shift = true } }));
     }
 
     test "parseCLI reset clears tables" {
