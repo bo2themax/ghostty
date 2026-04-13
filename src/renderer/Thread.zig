@@ -423,6 +423,11 @@ fn drainMailbox(self: *Thread) !void {
                 }
             },
 
+            .readonly => |v| {
+                self.renderer.setReadonly(v);
+                self.drawFrame(false);
+            },
+
             .reset_cursor_blink => {
                 self.flags.cursor_blink_visible = true;
                 if (self.cursor_c.state() == .active) {

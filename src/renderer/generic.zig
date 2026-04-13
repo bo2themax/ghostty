@@ -115,6 +115,10 @@ pub fn Renderer(comptime GraphicsAPI: type) type {
         /// True if the window is focused
         focused: bool,
 
+        /// True if the surface is in readonly mode. When readonly,
+        /// the cursor is not rendered.
+        readonly: bool = false,
+
         /// Flag to indicate that our focus state changed for custom
         /// shaders to update their state.
         custom_shader_focused_changed: bool = false,
@@ -1047,6 +1051,13 @@ pub fn Renderer(comptime GraphicsAPI: type) type {
             }
         }
 
+        /// Callback when the readonly state changes for the surface.
+        ///
+        /// Must be called on the render thread.
+        pub fn setReadonly(self: *Self, readonly: bool) void {
+            self.readonly = readonly;
+        }
+
         /// Callback when the window is visible or occluded.
         ///
         /// Must be called on the render thread.
@@ -1367,6 +1378,7 @@ pub fn Renderer(comptime GraphicsAPI: type) type {
                         .preedit = critical.preedit != null,
                         .focused = self.focused,
                         .blink_visible = cursor_blink_visible,
+                        .readonly = self.readonly,
                     }),
                     &critical.links,
                 ) catch |err| {
@@ -2088,7 +2100,7 @@ pub fn Renderer(comptime GraphicsAPI: type) type {
             }
 
             // Cursor visibility
-            uniforms.cursor_visible = @intFromBool(self.terminal_state.cursor.visible);
+            uniforms.cursor_visible = @intFromBool(self.terminal_state.cursor.visible and !self.readonly);
 
             // Cursor style
             const cursor_style: renderer.CursorStyle = .fromTerminal(self.terminal_state.cursor.visual_style);

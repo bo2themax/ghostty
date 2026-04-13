@@ -29,6 +29,7 @@ pub const StyleOptions = struct {
     preedit: bool = false,
     focused: bool = false,
     blink_visible: bool = false,
+    readonly: bool = false,
 };
 
 /// Returns the cursor style to use for the current render state or null
@@ -43,6 +44,9 @@ pub fn style(
 
     // The cursor must be visible in the viewport to be rendered.
     if (state.cursor.viewport == null) return null;
+
+    // If the surface is in readonly mode, we never show the cursor.
+    if (opts.readonly) return null;
 
     // If we are in preedit, then we always show the block cursor. We do
     // this even if the cursor is explicitly not visible because it shows
@@ -151,4 +155,23 @@ test "cursor: always block with preedit" {
     try testing.expect(style(&state, .{ .preedit = true, .focused = true, .blink_visible = false }) == null);
     try testing.expect(style(&state, .{ .preedit = true, .focused = true, .blink_visible = true }) == null);
     try testing.expect(style(&state, .{ .preedit = true, .focused = false, .blink_visible = true }) == null);
+}
+
+test "cursor: readonly hides cursor" {
+    const testing = std.testing;
+    const alloc = testing.allocator;
+    var term = try terminal.Terminal.init(alloc, .{ .cols = 10, .rows = 10 });
+    defer term.deinit(alloc);
+
+    var state: terminal.RenderState = .empty;
+    defer state.deinit(alloc);
+    try state.update(alloc, &term);
+
+    // Readonly always hides the cursor regardless of other state
+    try testing.expect(style(&state, .{ .readonly = true, .focused = true, .blink_visible = true }) == null);
+    try testing.expect(style(&state, .{ .readonly = true, .focused = false, .blink_visible = true }) == null);
+    try testing.expect(style(&state, .{ .readonly = true, .preedit = true, .focused = true, .blink_visible = true }) == null);
+
+    // Without readonly, cursor is visible
+    try testing.expect(style(&state, .{ .readonly = false, .focused = true, .blink_visible = true }) != null);
 }

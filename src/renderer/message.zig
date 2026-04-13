@@ -17,6 +17,10 @@ pub const Message = union(enum) {
     /// the renderer is expected to handle all of these.
     focus: bool,
 
+    /// A change in the readonly state of the surface. When readonly,
+    /// the cursor should not be rendered.
+    readonly: bool,
+
     /// A change in the view occlusion state. This can be used to determine
     /// if the window is visible or not. A window can be not visible (occluded)
     /// and still have focus.

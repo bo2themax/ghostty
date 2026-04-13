@@ -5560,6 +5560,12 @@ pub fn performBindingAction(self: *Surface, action: input.Binding.Action) !bool 
 
         .toggle_readonly => {
             self.readonly = !self.readonly;
+
+            // Notify the renderer to hide/show the cursor.
+            _ = self.renderer_thread.mailbox.push(.{
+                .readonly = self.readonly,
+            }, .{ .forever = {} });
+
             _ = try self.rt_app.performAction(
                 .{ .surface = self },
                 .readonly,
