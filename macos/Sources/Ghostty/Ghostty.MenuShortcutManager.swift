@@ -13,6 +13,16 @@ extension Ghostty {
         /// If multiple items map to the same shortcut, the most recent one wins.
         private var menuItemsByShortcut: [MenuShortcutKey: Weak<NSMenuItem>] = [:]
 
+        /// Original shortcut configured in xib indexed by their action
+        private var originalMenuShortcutByAction: [Selector: MenuShortcutKey] = [:]
+
+        /// Save the original shortcuts of all the items in this menu
+        ///
+        /// - Important: This should be called upon Ghostty launches before updating any shortcuts
+        func saveInitialState(for menu: NSMenu?) {
+            saveOriginalMenuItemShortcutsRecursively(in: menu)
+        }
+
         /// Reset our shortcut index since we're about to rebuild all menu bindings.
         func reset() {
             menuItemsByShortcut.removeAll(keepingCapacity: true)
@@ -73,6 +83,25 @@ extension Ghostty {
     }
 }
 
+// MARK: - Recursive checks
+
+private extension Ghostty.MenuShortcutManager {
+    /// Save initial/default keyboard shortcut of every menu item recursively in this menu
+    ///
+    /// - Important: This should only be called once per app launch
+    func saveOriginalMenuItemShortcutsRecursively(in menu: NSMenu?) {
+        guard let menu else {
+            return
+        }
+        for item in menu.items {
+            saveOriginalMenuItemShortcut(item: item)
+            saveOriginalMenuItemShortcutsRecursively(in: item.submenu)
+        }
+    }
+}
+
+// MARK: - Process a single menu item
+
 private extension Ghostty.MenuShortcutManager {
     /// Syncs a single menu shortcut for the given action. The action string is the same
     /// action string used for the Ghostty configuration.
@@ -95,6 +124,29 @@ private extension Ghostty.MenuShortcutManager {
         // Later registrations intentionally override earlier ones for the same key.
         menuItemsByShortcut[key] = .init(menu)
         return true
+    }
+
+    /// Restore the shortcut of the item to the original one registered when first launched
+    func restoreMenuItemShortcut(item: NSMenuItem) {
+        guard
+            let action = item.action,
+            let key = originalMenuShortcutByAction[action]
+        else {
+            return
+        }
+        item.keyEquivalent = key.keyEquivalent
+        item.keyEquivalentModifierMask = key.modifierFlags
+    }
+
+    func saveOriginalMenuItemShortcut(item: NSMenuItem) {
+        guard
+            let action = item.action,
+            originalMenuShortcutByAction[action] == nil,
+            let shortcut = MenuShortcutKey(item)
+        else {
+            return
+        }
+        originalMenuShortcutByAction[action] = shortcut
     }
 }
 

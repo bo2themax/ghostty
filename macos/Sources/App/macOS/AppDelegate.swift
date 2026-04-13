@@ -209,6 +209,9 @@ class AppDelegate: NSObject,
             toggleSecureInput(self)
         }
 
+        // Save original shortcuts configured in xib
+        menuShortcutManager.saveInitialState(for: NSApp.mainMenu)
+
         // Initial config loading
         ghosttyConfigDidChange(config: ghostty.config)
 
