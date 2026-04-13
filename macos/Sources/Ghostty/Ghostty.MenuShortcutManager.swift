@@ -28,6 +28,11 @@ extension Ghostty {
             menuItemsByShortcut.removeAll(keepingCapacity: true)
         }
 
+        /// Check shortcuts conflicts for items not touched in previous calls
+        func checkItems(in menu: NSMenu?) {
+            checkConflictsRecursively(in: menu)
+        }
+
         /// Syncs a single menu shortcut for the given action. The action string is the same
         /// action string used for the Ghostty configuration.
         func syncMenuShortcut(_ config: Ghostty.Config, action: String?, menuItem: NSMenuItem?) {
@@ -98,6 +103,20 @@ private extension Ghostty.MenuShortcutManager {
             saveOriginalMenuItemShortcutsRecursively(in: item.submenu)
         }
     }
+
+    /// Shortcuts in Ghostty configuration should have higher priority than default shortcuts
+    ///
+    /// We run this to do a final check for every menu item
+    func checkConflictsRecursively(in menu: NSMenu?) {
+        guard let menu else {
+            return
+        }
+
+        for item in menu.items {
+            checkConflicts(item: item)
+            checkConflictsRecursively(in: item.submenu)
+        }
+    }
 }
 
 // MARK: - Process a single menu item
@@ -147,6 +166,26 @@ private extension Ghostty.MenuShortcutManager {
             return
         }
         originalMenuShortcutByAction[action] = shortcut
+    }
+
+    func checkConflicts(item: NSMenuItem) {
+        guard
+            let key = MenuShortcutKey(item),
+            let shortcut = key.swiftUIShortcut
+        else {
+            // no default shortcut configured
+            return
+        }
+
+        // There should be an existing shortcut first
+        // Then we check if the action is the same
+        if let existed = menuItemsByShortcut[key]?.value, existed.action != item.action {
+            // User configured shortcut has conflicts with default one,
+            // clear the default one
+            item.keyEquivalent = ""
+            item.keyEquivalentModifierMask = []
+            return
+        }
     }
 }
 
