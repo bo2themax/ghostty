@@ -61,8 +61,9 @@ extension Ghostty {
             guard let menu = menuItem else { return }
 
             if !updateMenuShortcut(config, action: action, menuItem: menu) {
-                menu.keyEquivalent = ""
-                menu.keyEquivalentModifierMask = []
+                // Restore to the original shortcut, if not configured
+                restoreMenuItemShortcut(item: menu)
+                // Conflicts will be checked later
             }
         }
 
@@ -204,6 +205,21 @@ private extension Ghostty.MenuShortcutManager {
         if let existed = menuItemsByShortcut[key]?.value, existed.action != item.action {
             // User configured shortcut has conflicts with default one,
             // clear the default one
+            item.keyEquivalent = ""
+            item.keyEquivalentModifierMask = []
+            return
+        }
+
+        // Clear shortcut when it's unbound
+        if provider.isKeyboardShortcutUnbound(shortcut) {
+            item.keyEquivalent = ""
+            item.keyEquivalentModifierMask = []
+            return
+        }
+
+        // Clear shortcut when it's bound to another Ghostty action
+        // which is not in the menu
+        if menuItemsByShortcut[key] == nil, provider.isKeyboardShortcutBinding(shortcut) == true {
             item.keyEquivalent = ""
             item.keyEquivalentModifierMask = []
             return
