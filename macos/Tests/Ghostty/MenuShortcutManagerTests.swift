@@ -20,6 +20,8 @@ struct MenuShortcutManagerTests {
         await manager.reset()
         await manager.syncMenuShortcut(config, action: "new_split:right", menuItem: item)
 
+        await manager.checkItems(in: menu, provider: config)
+
         #expect(item.keyEquivalent.isEmpty)
         #expect(item.keyEquivalentModifierMask.isEmpty)
 
@@ -27,6 +29,7 @@ struct MenuShortcutManagerTests {
 
         await manager.reset()
         await manager.syncMenuShortcut(config, action: "new_split:right", menuItem: item)
+        await manager.checkItems(in: menu, provider: config)
 
         #expect(item.keyEquivalent == "d")
         #expect(item.keyEquivalentModifierMask == .command)
@@ -51,6 +54,8 @@ struct MenuShortcutManagerTests {
         await manager.syncMenuShortcut(config, action: nil, menuItem: hideItem)
         await manager.syncMenuShortcut(config, action: "goto_split:left", menuItem: goToLeftItem)
 
+        await manager.checkItems(in: menu, provider: config)
+
         #expect(hideItem.keyEquivalent.isEmpty)
         #expect(hideItem.keyEquivalentModifierMask.isEmpty)
 
@@ -65,6 +70,8 @@ struct MenuShortcutManagerTests {
 
         await manager.syncMenuShortcut(config, action: nil, menuItem: hideItem)
         await manager.syncMenuShortcut(config, action: "goto_split:left", menuItem: goToLeftItem)
+
+        await manager.checkItems(in: menu, provider: config)
 
         #expect(hideItem.keyEquivalent.isEmpty)
         #expect(hideItem.keyEquivalentModifierMask.isEmpty)
@@ -92,7 +99,8 @@ struct MenuShortcutManagerTests {
         await manager.saveInitialState(for: menu)
         await manager.reset()
         await manager.syncMenuShortcut(config, action: "new_tab", menuItem: newTabItem)
-        await manager.checkItems(in: menu)
+
+        await manager.checkItems(in: menu, provider: config)
 
         // Now simulate the system inserting "Window" with Cmd+T
         // which conflicts with Cmd+T already owned by Ghostty's "new_tab".
@@ -125,7 +133,7 @@ struct MenuShortcutManagerTests {
         await manager.reset()
         await manager.syncMenuShortcut(config, action: "new_tab", menuItem: newTabItem)
 
-        await manager.checkItems(in: menu)
+        await manager.checkItems(in: menu, provider: config)
 
         // Conflicts with ghostty action
         #expect(showAllTabs.keyEquivalent.isEmpty)
@@ -136,6 +144,7 @@ struct MenuShortcutManagerTests {
     func dynamicItemIgnoredForUnrelatedMenu() async throws {
         // Items added to a menu that is NOT a descendant of the tracked menu
         // should be ignored by the observer.
+        let config = try TemporaryConfig("")
 
         let newTabItem = NSMenuItem(title: "New Tab", action: "newTab:", keyEquivalent: "")
         let menu = NSMenu()
@@ -148,7 +157,7 @@ struct MenuShortcutManagerTests {
         await manager.saveInitialState(for: trackedMenu)
 
         await manager.reset()
-        await manager.checkItems(in: trackedMenu)
+        await manager.checkItems(in: trackedMenu, provider: config)
 
         let item = NSMenuItem(title: "Show All Tabs", action: "showAllTabs:", keyEquivalent: "t")
         item.keyEquivalentModifierMask = [.command, .shift]
@@ -176,7 +185,7 @@ struct MenuShortcutManagerTests {
 
         await manager.reset()
         await manager.syncMenuShortcut(config, action: "new_tab", menuItem: newTabItem)
-        await manager.checkItems(in: menu)
+        await manager.checkItems(in: menu, provider: config)
 
         let windowItem = NSMenuItem(title: "Window", action: "window:", keyEquivalent: "t")
         windowItem.keyEquivalentModifierMask = [.command]

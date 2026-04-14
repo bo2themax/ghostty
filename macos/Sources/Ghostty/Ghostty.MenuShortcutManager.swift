@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import SwiftUI
+import GhosttyKit
 
 extension Ghostty {
     /// The manager that's responsible for updating shortcuts of Ghostty's app menu
@@ -32,8 +33,8 @@ extension Ghostty {
         }
 
         /// Check shortcuts conflicts for items not touched in previous calls
-        func checkItems(in menu: NSMenu?) {
-            checkConflictsRecursively(in: menu)
+        func checkItems(in menu: NSMenu?, provider: Ghostty.KeyBindingProvider) {
+            checkConflictsRecursively(in: menu, provider: provider)
             // Track new items that are not added upon launch,
             // e.g. "Show All Tabs", "Writing Tools", "Move & Resize"
             menuObserver = NotificationCenter.default.publisher(for: NSMenu.didAddItemNotification)
@@ -49,8 +50,8 @@ extension Ghostty {
                     self?.saveOriginalMenuItemShortcut(item: item)
                     self?.saveOriginalMenuItemShortcutsRecursively(in: item.submenu)
 
-                    self?.checkConflicts(item: item)
-                    self?.checkConflictsRecursively(in: item.submenu)
+                    self?.checkConflicts(item: item, provider: provider)
+                    self?.checkConflictsRecursively(in: item.submenu, provider: provider)
                 }
         }
 
@@ -128,14 +129,14 @@ private extension Ghostty.MenuShortcutManager {
     /// Shortcuts in Ghostty configuration should have higher priority than default shortcuts
     ///
     /// We run this to do a final check for every menu item
-    func checkConflictsRecursively(in menu: NSMenu?) {
+    func checkConflictsRecursively(in menu: NSMenu?, provider: Ghostty.KeyBindingProvider) {
         guard let menu else {
             return
         }
 
         for item in menu.items {
-            checkConflicts(item: item)
-            checkConflictsRecursively(in: item.submenu)
+            checkConflicts(item: item, provider: provider)
+            checkConflictsRecursively(in: item.submenu, provider: provider)
         }
     }
 }
@@ -189,7 +190,7 @@ private extension Ghostty.MenuShortcutManager {
         originalMenuShortcutByAction[action] = shortcut
     }
 
-    func checkConflicts(item: NSMenuItem) {
+    func checkConflicts(item: NSMenuItem, provider: Ghostty.KeyBindingProvider) {
         guard
             let key = MenuShortcutKey(item),
             let shortcut = key.swiftUIShortcut
@@ -278,6 +279,16 @@ extension Ghostty.MenuShortcutManager {
         }
     }
 }
+
+extension Ghostty {
+    /// Provide checks for whether a `KeyboardShortcut` is unbound or binding
+    protocol KeyBindingProvider {
+        func isKeyboardShortcutUnbound(_ keyboardShortcut: KeyboardShortcut) -> Bool
+        func isKeyboardShortcutBinding(_ keyboardShortcut: KeyboardShortcut) -> Bool
+    }
+}
+
+extension Ghostty.Config: Ghostty.KeyBindingProvider {}
 
 private extension NSMenu {
     var topLevelMenu: NSMenu? {
