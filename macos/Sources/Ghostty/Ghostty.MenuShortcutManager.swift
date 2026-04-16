@@ -202,10 +202,13 @@ extension Ghostty.MenuShortcutManager {
             NSEvent.ModifierFlags(rawValue: modifiersRawValue)
         }
 
-        init?(keyEquivalent: String, modifiers: NSEvent.ModifierFlags) {
+        init?(keyEquivalent: String, modifiers: NSEvent.ModifierFlags, stripModifiers: Bool = true) {
             let normalized = keyEquivalent.lowercased()
             guard !normalized.isEmpty else { return nil }
-            var mods = modifiers.intersection(Self.shortcutModifiers)
+            var mods = modifiers
+            if stripModifiers {
+                mods = modifiers.intersection(Self.shortcutModifiers)
+            }
             if
                 keyEquivalent.lowercased() != keyEquivalent.uppercased(),
                 normalized.uppercased() == keyEquivalent {
@@ -225,10 +228,14 @@ extension Ghostty.MenuShortcutManager {
         /// Create from a `NSMenuItem`
         ///
         /// - Important: This will check whether the `keyEquivalent` is uppercased by `.shift` modifier.
+        ///
+        /// System will populate items like "Emoji & Symbols" with `.function` modifiers,
+        /// so we shouldn't strip it from the original value when saving
         init?(_ menuItem: NSMenuItem) {
             self.init(
                 keyEquivalent: menuItem.keyEquivalent,
                 modifiers: menuItem.keyEquivalentModifierMask,
+                stripModifiers: false,
             )
         }
 

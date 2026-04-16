@@ -25,6 +25,17 @@ struct NormalizedMenuShortcutKeyTests {
         #expect(key == expected)
     }
 
+    @Test func dontStripsNonShortcutModifiersForMenuItem() {
+        // .capsLock and .function should be stripped
+        let item = NSMenuItem(title: "", action: nil, keyEquivalent: "d")
+        // Setting .function is not working here,
+        // but system will populate items like "Emoji & Symbols" with it
+        item.keyEquivalentModifierMask = [.capsLock]
+        let key = Key(item)
+        #expect(key?.keyEquivalent == "d")
+        #expect(key?.modifierFlags == [.capsLock])
+    }
+
     @Test func preservesShortcutModifiers() {
         let key = Key(keyEquivalent: "c", modifiers: [.shift, .control, .option, .command])
         let allMods: NSEvent.ModifierFlags = [.shift, .control, .option, .command]
