@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 extension Ghostty {
@@ -16,6 +17,8 @@ extension Ghostty {
         /// Original shortcut configured in xib indexed by their action
         private var originalMenuShortcutByAction: [Selector: MenuShortcutKey] = [:]
 
+        private var menuObserver: AnyCancellable?
+
         /// Save the original shortcuts of all the items in this menu
         ///
         /// - Important: This should be called upon Ghostty launches before updating any shortcuts
@@ -31,6 +34,24 @@ extension Ghostty {
         /// Check shortcuts conflicts for items not touched in previous calls
         func checkItems(in menu: NSMenu?) {
             checkConflictsRecursively(in: menu)
+            // Track new items that are not added upon launch,
+            // e.g. "Show All Tabs", "Writing Tools", "Move & Resize"
+            menuObserver = NotificationCenter.default.publisher(for: NSMenu.didAddItemNotification)
+                .sink { [weak menu, weak self] notification in
+                    guard
+                        let updatedMenu = notification.object as? NSMenu,
+                        let index = notification.userInfo?["NSMenuItemIndex"] as? Int,
+                        let item = updatedMenu.item(at: index),
+                        updatedMenu == menu || updatedMenu.topLevelMenu == menu
+                    else { return }
+
+                    // Track new items in if needed
+                    self?.saveOriginalMenuItemShortcut(item: item)
+                    self?.saveOriginalMenuItemShortcutsRecursively(in: item.submenu)
+
+                    self?.checkConflicts(item: item)
+                    self?.checkConflictsRecursively(in: item.submenu)
+                }
         }
 
         /// Syncs a single menu shortcut for the given action. The action string is the same
@@ -254,6 +275,16 @@ extension Ghostty.MenuShortcutManager {
                 KeyEquivalent(character),
                 modifiers: .init(nsFlags: modifierFlags)
             )
+        }
+    }
+}
+
+private extension NSMenu {
+    var topLevelMenu: NSMenu? {
+        if let supermenu, supermenu.supermenu == nil {
+            return supermenu
+        } else {
+            return supermenu?.topLevelMenu
         }
     }
 }
