@@ -1,3 +1,4 @@
+/*
 import Sparkle
 import Cocoa
 
@@ -32,3 +33,4 @@ extension UpdateDriver: SPUUpdaterDelegate {
         return true
     }
 }
+*/

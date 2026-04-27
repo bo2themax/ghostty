@@ -2,7 +2,6 @@ import AppKit
 import SwiftUI
 import UserNotifications
 import OSLog
-import Sparkle
 import GhosttyKit
 
 class AppDelegate: NSObject,
@@ -644,6 +643,7 @@ class AppDelegate: NSObject,
         guard let config = notification.userInfo?[
             Notification.Name.GhosttyConfigChangeKey
         ] as? Ghostty.Config else { return }
+        updateController.updateChannel(config)
 
         ghosttyConfigDidChange(config: config)
     }
@@ -768,6 +768,7 @@ class AppDelegate: NSObject,
         // explicitly false (NO), auto-updates are disabled. Otherwise, we use the behavior
         // defined by our "auto-update" configuration (if set) or fall back to Sparkle
         // user-based defaults.
+        /*
         if Bundle.main.infoDictionary?["SUEnableAutomaticChecks"] as? Bool == false {
             updateController.updater.automaticallyChecksForUpdates = false
             updateController.updater.automaticallyDownloadsUpdates = false
@@ -785,7 +786,7 @@ class AppDelegate: NSObject,
              */
             // updateController.updater.checkForUpdatesInBackground()
         }
-
+         */
         // Config could change keybindings, so update everything that depends on that
         DispatchQueue.main.async {
             self.syncMenuShortcuts(config)

@@ -1,3 +1,4 @@
+/*
 import Sparkle
 import Cocoa
 import Combine
@@ -121,3 +122,4 @@ class UpdateController {
         return true
     }
 }
+*/

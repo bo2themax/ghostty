@@ -1,3 +1,4 @@
+/*
 import Foundation
 import Sparkle
 
@@ -299,3 +300,4 @@ enum UpdateSimulator {
         ))
     }
 }
+*/

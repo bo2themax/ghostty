@@ -1,3 +1,4 @@
+/*
 import Cocoa
 import Sparkle
 
@@ -210,3 +211,4 @@ class UpdateDriver: NSObject, SPUUserDriver {
         }
     }
 }
+*/

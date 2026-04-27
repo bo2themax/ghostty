@@ -1,7 +1,121 @@
-/*
+import AppUpdater
 import Foundation
 import SwiftUI
-import Sparkle
+import Combine
+
+class UpdateController {
+    private(set) var viewModel: UpdateViewModel
+    private var autoUpdater: AppUpdater?
+    private(set) var updater: AppUpdater?
+    private(set) var isInstalling: Bool = false
+    private var cancellables = Set<AnyCancellable>()
+
+    private let owner: String
+    private let repo: String
+
+    private var allowPrereleases = false
+    init() {
+        let hostBundle = Bundle.main
+        owner = hostBundle.infoDictionary?["REPO_OWNER"] as? String ?? "bo2themax"
+        repo = hostBundle.infoDictionary?["REPO_NAME"] as? String ?? "ghostty"
+        self.viewModel = UpdateViewModel()
+    }
+
+    private func newUpdater() -> AppUpdater {
+        let updater = AppUpdater(owner: owner, repo: repo, releasePrefix: "Ghostty")
+        updater.allowPrereleases = allowPrereleases
+        updater.skipCodeSignValidation = true
+        updater.enableDebugInfo = true
+        #if DEBUG
+        updater.provider = MockReleaseProvider(source: .fileURL(URL(fileURLWithPath: "~/Downloads/Ghostty/releases.mock.json")))
+        #endif
+        return updater
+    }
+    func startUpdater() {}
+
+    func updateChannel(_ config: Ghostty.Config) {
+        allowPrereleases = config.autoUpdateChannel == .tip
+        if config.autoUpdate != .off {
+            autoUpdater = newUpdater()
+        }
+    }
+
+    func checkForUpdates() {
+        updater = autoUpdater ?? newUpdater()
+        cancellables.removeAll()
+        guard let updater else { return }
+        viewModel.state = .checking(.init(cancel: {}))
+        updater.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newState in
+                switch newState {
+                case .none:
+                    self?.viewModel.state = .idle
+                case .downloading(_, _, fraction: let fraction):
+                    self?.viewModel.state = .downloading(.init(cancel: {}, expectedLength: 100, progress: UInt64(fraction * 100)))
+                case .downloaded( _, _, let bundle):
+                    self?.viewModel.state = .installing(.init(retryTerminatingApplication: { [weak self] in
+                        self?.updater?.install(bundle, fail: { [weak self] _ in
+                            DispatchQueue.main.async {
+                                self?.viewModel.state = .idle
+                            }
+                        })
+                    }, dismiss: {}))
+                case .newVersionDetected(let release, _):
+                    self?.viewModel.state = .updateAvailable(.init(appcastItem: release, reply: { [weak self] choice in
+                        switch choice {
+                        case .dismiss, .skip:
+                            break
+                        case .install:
+                            self?.updater?.install()
+                        }
+                    }))
+                }
+            }
+            .store(in: &cancellables)
+        updater.check {
+            AppDelegate.logger.info("manual check success")
+        } fail: { [weak self] err in
+            AppDelegate.logger.error("manual check failed: \(err)")
+            DispatchQueue.main.async {
+                self?.viewModel.state = .idle
+            }
+        }
+        updater.$downloadedAppBundle
+            .sink { _ in
+                if let newBundle {
+                    // do success things
+                    print("newBundle")
+                }
+            }
+            .store(in: &cancellables)
+        updater.onDownloadSuccess = {
+            // do success things; keep manual install via UI to avoid replacing the running app during tests
+            print("download success")
+        }
+        updater.onDownloadFail = { _ in
+            // do failing things
+            print("download failed")
+        }
+        updater.onInstallSuccess = {
+            // do success things
+            print("install success")
+        }
+        updater.onInstallFail = { _ in
+            // do failing things
+            print("install failed")
+        }
+        updater.check {
+            //
+        } fail: { _ in
+
+        }
+    }
+
+    func installUpdate() {
+
+    }
+}
 
 class UpdateViewModel: ObservableObject {
     @Published var state: UpdateState = .idle
@@ -191,7 +305,7 @@ enum UpdateState: Equatable {
         return false
     }
 
-    /// This is true if we're in a state that can be force installed. 
+    /// This is true if we're in a state that can be force installed.
     var isInstallable: Bool {
         switch self {
         case .checking,
@@ -265,8 +379,8 @@ enum UpdateState: Equatable {
     }
 
     struct PermissionRequest {
-        let request: SPUUpdatePermissionRequest
-        let reply: @Sendable (SUUpdatePermissionResponse) -> Void
+        enum Response { case dismiss, install }
+        let reply: @Sendable (Response) -> Void
     }
 
     struct Checking {
@@ -274,8 +388,9 @@ enum UpdateState: Equatable {
     }
 
     struct UpdateAvailable {
-        let appcastItem: SUAppcastItem
-        let reply: @Sendable (SPUUserUpdateChoice) -> Void
+        let appcastItem: Release
+        enum Choice { case skip, dismiss, install }
+        let reply: @Sendable (Choice) -> Void
 
         var releaseNotes: ReleaseNotes? {
             let currentCommit = Bundle.main.infoDictionary?["GhosttyCommit"] as? String
@@ -371,4 +486,9 @@ enum UpdateState: Equatable {
         let dismiss: () -> Void
     }
 }
-*/
+
+extension Release {
+    var displayVersionString: String {
+        tagName.description
+    }
+}

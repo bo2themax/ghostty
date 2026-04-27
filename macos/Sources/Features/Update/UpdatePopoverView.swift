@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(Sparkle)
 import Sparkle
+#endif
 
 /// A popover view that displays detailed update information and action buttons.
 ///
@@ -67,7 +69,7 @@ private struct PermissionRequestView: View {
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
+/*
             HStack(spacing: 8) {
                 Button("Not Now") {
                     request.reply(SUUpdatePermissionResponse(
@@ -88,6 +90,7 @@ private struct PermissionRequestView: View {
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
             }
+*/
         }
         .padding(16)
     }
@@ -141,7 +144,7 @@ private struct UpdateAvailableView: View {
                             Text(update.appcastItem.displayVersionString)
                         }
                         .font(.system(size: 11))
-
+/*
                         if update.appcastItem.contentLength > 0 {
                             HStack(spacing: 6) {
                                 Text("Size:")
@@ -161,6 +164,7 @@ private struct UpdateAvailableView: View {
                             }
                             .font(.system(size: 11))
                         }
+ */
                     }
                     .textSelection(.enabled)
                 }
@@ -385,3 +389,4 @@ private struct UpdateErrorView: View {
         .padding(16)
     }
 }
+
