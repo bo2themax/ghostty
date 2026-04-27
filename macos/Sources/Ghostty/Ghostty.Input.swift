@@ -48,6 +48,70 @@ extension Ghostty {
             modifiers: EventModifiers(nsFlags: Ghostty.eventModifierFlags(mods: trigger.mods)))
     }
 
+    /// Map the KeyboardShortcut to `ghostty_input_trigger_s`
+    /// which is basically reversed from ``keyboardShortcut(for:)``
+    static func ghosttyTrigger(_ keyboardShortcut: KeyboardShortcut, tag: ghostty_input_trigger_tag_e) -> ghostty_input_trigger_s? {
+        guard
+            let normalized = MenuShortcutManager.MenuShortcutKey(keyboardShortcut),
+            let char = normalized.keyEquivalent.first
+        else {
+            return nil
+        }
+        let mods = ghosttyMods(normalized.modifierFlags)
+        if tag == GHOSTTY_TRIGGER_PHYSICAL, let physicalKey = Ghostty.Input.Key(character: char)?.cKey {
+            return ghostty_input_trigger_s(
+                tag: GHOSTTY_TRIGGER_PHYSICAL,
+                key: .init(physical: physicalKey),
+                mods: mods,
+            )
+        }
+        if tag == GHOSTTY_TRIGGER_UNICODE {
+            guard let unicodeValue = char.unicodeScalars.first?.value else {
+                return nil
+            }
+            return ghostty_input_trigger_s(
+                tag: GHOSTTY_TRIGGER_UNICODE,
+                key: .init(unicode: unicodeValue),
+                mods: mods,
+            )
+        }
+
+        // GHOSTTY_TRIGGER_CATCH_ALL has no payload
+        return nil
+    }
+
+    /// Create a `ghostty_input_key_s` from a `KeyboardShortcut`.
+    ///
+    /// Returns nil if the shortcut cannot be converted to a trigger.
+    /// The text field is always nil since it cannot be safely determined from a shortcut.
+    /// For unicode triggers, the keycode may be 0 if the character has no corresponding
+    /// physical key (e.g. ü, ß on a US layout).
+    static func ghosttyKeyEvent(
+        _ keyboardShortcut: KeyboardShortcut,
+        action: ghostty_input_action_e = GHOSTTY_ACTION_PRESS,
+    ) -> ghostty_input_key_s? {
+        guard
+            let normalized = MenuShortcutManager.MenuShortcutKey(keyboardShortcut),
+            let char = normalized.keyEquivalent.first
+        else {
+            return nil
+        }
+
+        let mods = Ghostty.ghosttyMods(normalized.modifierFlags)
+        var keyEvent = ghostty_input_key_s()
+        keyEvent.action = action
+        keyEvent.mods = mods
+        keyEvent.consumed_mods = Ghostty.ghosttyMods(normalized.modifierFlags.subtracting([.control, .command]))
+        keyEvent.text = nil
+        keyEvent.composing = false
+        if let physicalKeyCode = Ghostty.Input.Key(character: char)?.keyCode {
+            keyEvent.keycode = UInt32(physicalKeyCode)
+        }
+        keyEvent.unshifted_codepoint = char.unicodeScalars.first?.value ?? 0
+
+        return keyEvent
+    }
+
     // MARK: Mods
 
     /// Returns the event modifier flags set for the Ghostty mods enum.
@@ -781,6 +845,113 @@ extension Ghostty.Input {
             }
 
             return nil
+        }
+
+        /// Get a key from a SwiftUI/AppKit Character.
+        ///
+        /// Handles the special-key Unicode constants used by `KeyEquivalent`/`NSEvent` (function
+        /// keys, arrow keys, etc.) and ASCII letters/digits/punctuation. Returns nil for characters
+        /// that don't have a corresponding `Ghostty.Input.Key`.
+        init?(character: Character) {
+            switch character {
+            // Special keys (mirror of Ghostty.keyToEquivalent)
+            case KeyEquivalent.upArrow.character: self = .arrowUp
+            case KeyEquivalent.downArrow.character: self = .arrowDown
+            case KeyEquivalent.leftArrow.character: self = .arrowLeft
+            case KeyEquivalent.rightArrow.character: self = .arrowRight
+            case KeyEquivalent.home.character: self = .home
+            case KeyEquivalent.end.character: self = .end
+            case KeyEquivalent.deleteForward.character: self = .delete
+            case KeyEquivalent.pageUp.character: self = .pageUp
+            case KeyEquivalent.pageDown.character: self = .pageDown
+            case KeyEquivalent.escape.character: self = .escape
+            case KeyEquivalent.return.character: self = .enter
+            case KeyEquivalent.tab.character: self = .tab
+            case KeyEquivalent.delete.character: self = .backspace
+            case KeyEquivalent.space.character: self = .space
+
+            // NSEvent special keys not exposed by SwiftUI
+            case Character(NSEvent.SpecialKey.insert.unicodeScalar): self = .insert
+            case Character(NSEvent.SpecialKey.menu.unicodeScalar): self = .contextMenu
+            case Character(NSEvent.SpecialKey.f1.unicodeScalar): self = .f1
+            case Character(NSEvent.SpecialKey.f2.unicodeScalar): self = .f2
+            case Character(NSEvent.SpecialKey.f3.unicodeScalar): self = .f3
+            case Character(NSEvent.SpecialKey.f4.unicodeScalar): self = .f4
+            case Character(NSEvent.SpecialKey.f5.unicodeScalar): self = .f5
+            case Character(NSEvent.SpecialKey.f6.unicodeScalar): self = .f6
+            case Character(NSEvent.SpecialKey.f7.unicodeScalar): self = .f7
+            case Character(NSEvent.SpecialKey.f8.unicodeScalar): self = .f8
+            case Character(NSEvent.SpecialKey.f9.unicodeScalar): self = .f9
+            case Character(NSEvent.SpecialKey.f10.unicodeScalar): self = .f10
+            case Character(NSEvent.SpecialKey.f11.unicodeScalar): self = .f11
+            case Character(NSEvent.SpecialKey.f12.unicodeScalar): self = .f12
+            case Character(NSEvent.SpecialKey.f13.unicodeScalar): self = .f13
+            case Character(NSEvent.SpecialKey.f14.unicodeScalar): self = .f14
+            case Character(NSEvent.SpecialKey.f15.unicodeScalar): self = .f15
+            case Character(NSEvent.SpecialKey.f16.unicodeScalar): self = .f16
+            case Character(NSEvent.SpecialKey.f17.unicodeScalar): self = .f17
+            case Character(NSEvent.SpecialKey.f18.unicodeScalar): self = .f18
+            case Character(NSEvent.SpecialKey.f19.unicodeScalar): self = .f19
+            case Character(NSEvent.SpecialKey.f20.unicodeScalar): self = .f20
+
+            // Letters
+            case "a", "A": self = .a
+            case "b", "B": self = .b
+            case "c", "C": self = .c
+            case "d", "D": self = .d
+            case "e", "E": self = .e
+            case "f", "F": self = .f
+            case "g", "G": self = .g
+            case "h", "H": self = .h
+            case "i", "I": self = .i
+            case "j", "J": self = .j
+            case "k", "K": self = .k
+            case "l", "L": self = .l
+            case "m", "M": self = .m
+            case "n", "N": self = .n
+            case "o", "O": self = .o
+            case "p", "P": self = .p
+            case "q", "Q": self = .q
+            case "r", "R": self = .r
+            case "s", "S": self = .s
+            case "t", "T": self = .t
+            case "u", "U": self = .u
+            case "v", "V": self = .v
+            case "w", "W": self = .w
+            case "x", "X": self = .x
+            case "y", "Y": self = .y
+            case "z", "Z": self = .z
+
+            // Digits
+            case "0": self = .digit0
+            case "1": self = .digit1
+            case "2": self = .digit2
+            case "3": self = .digit3
+            case "4": self = .digit4
+            case "5": self = .digit5
+            case "6": self = .digit6
+            case "7": self = .digit7
+            case "8": self = .digit8
+            case "9": self = .digit9
+
+            // Punctuation & symbols
+            case "-": self = .minus
+            case "=": self = .equal
+            case "`": self = .backquote
+            case "[": self = .bracketLeft
+            case "]": self = .bracketRight
+            case "\\": self = .backslash
+            case ";": self = .semicolon
+            case "'": self = .quote
+            case ",": self = .comma
+            case ".": self = .period
+            case "/": self = .slash
+
+            // TODO: handle non-US layouts (German ü/ö/ä/ß, French AZERTY, Spanish,
+            // Nordic, etc.) where characters sit at fixed physical positions.
+
+            default: return nil
+            }
         }
 
         var cKey: ghostty_input_key_e {

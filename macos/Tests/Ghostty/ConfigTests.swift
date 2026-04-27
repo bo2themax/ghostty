@@ -246,4 +246,54 @@ struct ConfigTests {
         let gotoToNextSplit = try #require(config.keyboardShortcut(for: "goto_split:next"))
         #expect(gotoToNextSplit == .init("]", modifiers: [.command]))
     }
+
+    @Test
+    func isBinding() async throws {
+        let config = try TemporaryConfig(#"""
+            keybind=cmd+c=new_window
+            keybind = global:ctrl+`=toggle_quick_terminal
+            keybind = cmd+shift+\>h>h=toggle_readonly
+            keybind = f1=goto_split:next
+            keybind = super+f2=goto_split:next
+            keybind = performable:f3=copy_to_clipboard
+            """#)
+        #expect(config.isKeyboardShortcutBinding(KeyboardShortcut("c", modifiers: .command)))
+        #expect(config.isKeyboardShortcutBinding(KeyboardShortcut("`", modifiers: .control)))
+        #expect(config.isKeyboardShortcutBinding(KeyboardShortcut("\\", modifiers: [.command, .shift])))
+        #expect(config.isKeyboardShortcutBinding(KeyboardShortcut(.init(.init(NSEvent.SpecialKey.f1.unicodeScalar)), modifiers: [])))
+        #expect(config.isKeyboardShortcutBinding(KeyboardShortcut(.init(.init(NSEvent.SpecialKey.f2.unicodeScalar)), modifiers: [.command])))
+
+        #expect(config.isKeyboardShortcutBinding(KeyboardShortcut(.init(.init(NSEvent.SpecialKey.f3.unicodeScalar)), modifiers: [])))
+    }
+
+    @Test
+    func unbind() async throws {
+        let config = try TemporaryConfig("keybind=cmd+c=unbind")
+        #expect(config.isKeyboardShortcutUnbound(KeyboardShortcut("c", modifiers: .command)))
+
+        try config.reload("keybind=cmd+c=new_window")
+        #expect(!config.isKeyboardShortcutUnbound(KeyboardShortcut("c", modifiers: .command)))
+        try config.reload("""
+            keybind=cmd+c=unbind
+            keybind=super+h=unbind
+            """)
+        #expect(config.isKeyboardShortcutUnbound(KeyboardShortcut("c", modifiers: .command)))
+        #expect(config.isKeyboardShortcutUnbound(KeyboardShortcut("h", modifiers: .command)))
+    }
+
+    @Test
+    func clear() async throws {
+        let config = try TemporaryConfig("")
+        try config.reload("keybind=clear")
+        #expect(config.isKeyboardShortcutUnbound(KeyboardShortcut("t", modifiers: .command)))
+        #expect(config.isKeyboardShortcutUnbound(KeyboardShortcut("d", modifiers: .command)))
+        #expect(config.isKeyboardShortcutUnbound(KeyboardShortcut("n", modifiers: .command)))
+        // Shortcut is not tracked by Ghostty shouldn't be marked as unbound
+        #expect(!config.isKeyboardShortcutUnbound(KeyboardShortcut("h", modifiers: .command)))
+
+        try config.reload("")
+        #expect(!config.isKeyboardShortcutUnbound(KeyboardShortcut("t", modifiers: .command)))
+        #expect(!config.isKeyboardShortcutUnbound(KeyboardShortcut("d", modifiers: .command)))
+        #expect(!config.isKeyboardShortcutUnbound(KeyboardShortcut("n", modifiers: .command)))
+    }
 }
