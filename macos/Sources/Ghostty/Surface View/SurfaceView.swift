@@ -129,6 +129,11 @@ extension Ghostty {
                             surfaceView.endSearch()
                         }
                     )
+
+                    Ghostty.SurfaceSearchFindIndicator(
+                        searchState: searchState,
+                        background: ghostty.config.searchSelectedBackground,
+                    )
                 }
 
                 // Show bell border if enabled

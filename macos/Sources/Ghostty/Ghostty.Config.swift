@@ -467,11 +467,14 @@ extension Ghostty {
                 return Color(NSColor.windowBackgroundColor)
             }
 
-            return .init(
-                red: Double(color.r) / 255,
-                green: Double(color.g) / 255,
-                blue: Double(color.b) / 255
-            )
+            return color
+        }
+
+        /// The background color used for the currently selected search match.
+        /// Falls back to the Zig default (#F2A57E) if unavailable.
+        var searchSelectedBackground: Color {
+            color(for: "search-selected-background") ??
+                .init(red: 242.0 / 255, green: 165.0 / 255, blue: 126.0 / 255)
         }
 
         var backgroundOpacity: Double {
@@ -728,6 +731,20 @@ extension Ghostty {
             _ = ghostty_config_get(config, &v, key, UInt(key.lengthOfBytes(using: .utf8)))
             return v
         }
+    }
+}
+
+private extension Ghostty.Config {
+    func color(for key: String) -> Color? {
+        var color: ghostty_config_color_s = .init()
+        if !ghostty_config_get(config, &color, key, UInt(key.lengthOfBytes(using: .utf8))) {
+            return nil
+        }
+        return .init(
+            red: Double(color.r) / 255,
+            green: Double(color.g) / 255,
+            blue: Double(color.b) / 255
+        )
     }
 }
 
