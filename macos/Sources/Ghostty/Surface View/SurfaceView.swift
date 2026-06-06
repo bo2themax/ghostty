@@ -329,10 +329,22 @@ extension Ghostty {
         let onClose: () -> Void
         @State private var corner: Corner = .topRight
         @State private var dragOffset: CGSize = .zero
-        @State private var barSize: CGSize = .zero
+        /// The bar's actual frame, measured in the overlay's coordinate space.
+        @State private var barFrame: CGRect = .zero
+        private var barSize: CGSize {
+            barFrame.size
+        }
+        @State private var isCutoutVisible: Bool = false
+        private var selectedSearchRegions: [CGRect] {
+            searchState.selected?.regions ?? []
+        }
         @FocusState private var isSearchFieldFocused: Bool
 
         private let padding: CGFloat = 8
+
+        /// Coordinate space anchored to the overlay's full bounds, used to
+        /// measure the bar's frame for cutout positioning.
+        private let coordinateSpaceName = "searchOverlay"
 
         var body: some View {
             GeometryReader { geo in
@@ -351,7 +363,7 @@ extension Ghostty {
                     .cornerRadius(6)
                     .focused($isSearchFieldFocused)
                     .overlay(alignment: .trailing) {
-                        if let selected = searchState.selected {
+                        if let selected = searchState.selected?.index {
                             Text("\(selected + 1)/\(searchState.total, default: "?")")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -403,9 +415,7 @@ extension Ghostty {
                     .buttonStyle(SearchButtonStyle())
 
                     Button(action: {
-                        guard let surface = surfaceView.surface else { return }
-                        let action = "navigate_search:previous"
-                        ghostty_surface_binding_action(surface, action, UInt(action.lengthOfBytes(using: .utf8)))
+                        _ = surfaceView.navigateSearchToPrevious()
                     }, label: {
                         Image(systemName: "chevron.down")
                     })
@@ -419,7 +429,15 @@ extension Ghostty {
                 .padding(8)
                 .background(.background)
                 .clipShape(clipShape)
-                .shadow(radius: 4)
+                .onContinuousHover { phase in
+                    // Show the full search bar when hovered
+                    isCutoutVisible = phase == .ended
+                }
+                .onChange(of: selectedSearchRegions) { newValue in
+                    // Show the full search bar when no match is highlighted
+                    isCutoutVisible = !newValue.isEmpty
+                }
+                .animation(.easeInOut(duration: 0.15), value: isCutoutVisible)
                 .onAppear {
                     isSearchFieldFocused = true
                 }
@@ -431,14 +449,21 @@ extension Ghostty {
                 }
                 .background(
                     GeometryReader { barGeo in
-                        Color.clear.onAppear {
-                            barSize = barGeo.size
-                        }
+                        Color.clear
+                            .onAppear {
+                                barFrame = barGeo.frame(in: .named(coordinateSpaceName))
+                            }
+                            .onChange(of: barGeo.frame(in: .named(coordinateSpaceName))) { newValue in
+                                barFrame = newValue
+                            }
                     }
                 )
                 .padding(padding)
                 .offset(dragOffset)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: corner.alignment)
+                .coordinateSpace(name: coordinateSpaceName)
+                .mask { cutoutMask() } // Making sure the mask's bounds == geo
+                .shadow(radius: 4)
                 .gesture(
                     DragGesture()
                         .onChanged { value in
@@ -455,8 +480,53 @@ extension Ghostty {
                                 corner = newCorner
                                 dragOffset = .zero
                             }
+                            // Show the cutout again if needed
+                            isCutoutVisible = !selectedSearchRegions.isEmpty
                         }
                 )
+            }
+        }
+
+        /// Fully opaque everywhere except where a selected search match sits behind it.
+        ///
+        /// It's kinda like Edge Light but reversed.
+        @ViewBuilder
+        private func cutoutMask() -> some View {
+            let cutouts = cutoutRects()
+            Rectangle()
+                .fill(Color.white)
+                .overlay {
+                    ZStack {
+                        ForEach(Array(cutouts.enumerated()), id: \.offset) { _, rect in
+                            Rectangle()
+                                .fill(Color.white)
+                                .frame(width: rect.width, height: rect.height)
+                                .position(x: rect.midX, y: rect.midY)
+                        }
+                    }
+                    // spread a little
+                    .shadow(color: .white, radius: 8, x: -10)
+                    .shadow(color: .white, radius: 8, x: 10)
+                    .shadow(color: .white, radius: 8, y: 10)
+                    .shadow(color: .white, radius: 8, y: -10)
+                    .compositingGroup()
+                    .blendMode(.destinationOut)
+                    .opacity(isCutoutVisible ? 0.8 : 0)
+                }
+                .compositingGroup()
+        }
+
+        /// The rects of the selected match that overlap the bar, expressed in
+        /// the overlay's container coordinate space.
+        private func cutoutRects() -> [CGRect] {
+            guard !barFrame.isEmpty, !selectedSearchRegions.isEmpty else { return [] }
+
+            // The bar's measured frame, shifted by any in-progress drag.
+            let bar = barFrame.offsetBy(dx: dragOffset.width, dy: dragOffset.height)
+
+            return selectedSearchRegions.compactMap { region in
+                let clipped = region.intersection(bar)
+                return (clipped.isNull || clipped.isEmpty) ? nil : clipped
             }
         }
 

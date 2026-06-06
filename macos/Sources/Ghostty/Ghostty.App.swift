@@ -2323,7 +2323,33 @@ extension Ghostty {
                 guard let surface = target.target.surface else { return }
                 guard let surfaceView = self.surfaceView(from: surface) else { return }
 
-                let selected: UInt? = v.selected >= 0 ? UInt(v.selected) : nil
+                let scale = surfaceView.window?.backingScaleFactor ?? 1
+                let selected: OSSurfaceView.SearchState.SelectedMatch?
+
+                if v.selected < 0 {
+                    selected = nil
+                } else {
+                    let index = UInt(v.selected)
+
+                    let reason: Ghostty.SurfaceView.SearchState.SelectedMatch.ChangeReason = switch v.reason {
+                    case GHOSTTY_ACTION_SEARCH_SELECTED_REASON_NAVIGATION: .navigation
+                    case GHOSTTY_ACTION_SEARCH_SELECTED_REASON_MATCH_UPDATE: .matchUpdate
+                    case GHOSTTY_ACTION_SEARCH_SELECTED_REASON_FRAME_UPDATE: .frameUpdate
+                    default: .matchUpdate
+                    }
+
+                    // Copy regions out of the C buffer before crossing the async
+                    // boundary — the buffer is freed once this callback returns.
+                    let regions: [CGRect] = UnsafeBufferPointer(
+                        start: v.regions,
+                        count: Int(v.regions_count)
+                    ).map { CGRect(x: $0.x / scale, y: $0.y / scale, width: $0.width / scale, height: $0.height / scale) }
+                    selected = Ghostty.SurfaceView.SearchState.SelectedMatch(
+                        index: index,
+                        regions: regions,
+                        reason: reason
+                    )
+                }
                 DispatchQueue.main.async {
                     surfaceView.searchState?.selected = selected
                 }

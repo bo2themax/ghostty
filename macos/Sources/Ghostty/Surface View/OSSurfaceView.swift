@@ -113,6 +113,8 @@ extension Ghostty {
     }
 }
 
+// MARK: Search Match Region
+
 // MARK: Search State
 
 extension Ghostty.OSSurfaceView {
@@ -133,7 +135,7 @@ extension Ghostty.OSSurfaceView {
 
         @Published var needle = Needle.empty
 
-        @Published var selected: UInt?
+        @Published var selected: SelectedMatch?
         @Published var total: UInt?
 
         init(
@@ -187,5 +189,28 @@ extension Ghostty.OSSurfaceView {
             return false
         }
         return true
+    }
+}
+
+extension Ghostty.OSSurfaceView.SearchState {
+    /// The current selected-match state — the index, its on-screen rects,
+    /// and why it most recently changed. Grouped together so observers
+    /// react to atomic updates of the three rather than three separate
+    /// `@Published` ripples.
+    struct SelectedMatch: Equatable {
+        /// 1-based index of the selected match, or nil when no match is
+        /// selected.
+        var index: UInt
+        /// The on-screen bounding rectangles of the currently selected search match; One per row if the match spans multiple row.
+        ///
+        /// - Important: Rects are in surface coordinates (**top-left**)
+        var regions: [CGRect]
+        var reason: ChangeReason
+
+        enum ChangeReason {
+            case navigation
+            case matchUpdate
+            case frameUpdate
+        }
     }
 }
