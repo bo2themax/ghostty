@@ -253,6 +253,7 @@ pub const App = struct {
 
     /// Close the given surface.
     pub fn closeSurface(self: *App, surface: *Surface) void {
+        log.warn("SC: destroying surface in embedded.zig", .{});
         surface.deinit();
         self.core_app.alloc.destroy(surface);
     }
@@ -1558,6 +1559,7 @@ pub const CAPI = struct {
     }
 
     export fn ghostty_surface_free(ptr: *Surface) void {
+        log.warn("SC: ghostty_surface_free is called in embedded.zig", .{});
         ptr.app.closeSurface(ptr);
     }
 

@@ -1465,6 +1465,7 @@ pub fn Renderer(comptime GraphicsAPI: type) type {
             defer if (self.scrollbar_dirty) {
                 // Fail instantly if the surface mailbox if full, we'll just
                 // get it on the next frame.
+                log.warn("SC: scrollbar_dirty in renderer/generic", .{});
                 if (self.surface_mailbox.push(.{
                     .scrollbar = self.scrollbar,
                 }, .instant) > 0) self.scrollbar_dirty = false;

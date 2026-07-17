@@ -412,6 +412,8 @@ extension Ghostty {
 
             // Cancel progress report timer
             progressReportTimer?.invalidate()
+
+            AppDelegate.logger.warning("SC: SurfaceView deinit finish")
         }
 
         override func endSearch() {

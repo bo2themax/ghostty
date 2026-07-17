@@ -265,7 +265,9 @@ fn drainMailbox(self: *App, rt_app: *apprt.App) !void {
 }
 
 pub fn closeSurface(self: *App, surface: *Surface) void {
+    log.warn("SC: trying closing surface in App.zig", .{});
     if (!self.hasSurface(surface)) return;
+    log.warn("SC: calling surface.close() in App.zig", .{});
     surface.close();
 }
 

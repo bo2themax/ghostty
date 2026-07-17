@@ -24,6 +24,7 @@ extension Ghostty {
         }
 
         deinit {
+            AppDelegate.logger.warning("SC: Surface deinit started")
             // deinit is not guaranteed to happen on the main actor and our API
             // calls into libghostty must happen there so we capture the surface
             // value so we don't capture `self` and then we detach it in a task.
