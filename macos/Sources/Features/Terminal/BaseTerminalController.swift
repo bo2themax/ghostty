@@ -1635,12 +1635,12 @@ extension BaseTerminalController {
             confirmation: request,
         )
         Task {
-            let response = await clipboardConfirmation?.present()
+            let response = await clipboardConfirmation?.present(window: window)
             switch response {
             case .alertFirstButtonReturn:
-                clipboardConfirmationComplete(.cancel)
+                clipboardConfirmationComplete(.cancel, remember: false)
             case .alertSecondButtonReturn:
-                clipboardConfirmationComplete(.confirm)
+                clipboardConfirmationComplete(.confirm, remember: clipboardConfirmation?.suppressionButton?.state == .on)
             default:
                 clipboardConfirmation = nil
             }
@@ -1670,7 +1670,7 @@ extension BaseTerminalController {
         target.pendingClipboardConfirmation = nil
     }
 
-    func clipboardConfirmationComplete(_ action: ClipboardConfirmationView.Action, remember: Bool) {
+    func clipboardConfirmationComplete(_ action: ClipboardConfirmationController.Action, remember: Bool) {
         // End our clipboard confirmation no matter what
         guard let cc = self.clipboardConfirmation else { return }
         dismissClipboardConfirmation(cc)

@@ -50,8 +50,8 @@ class TextViewAlert: NSAlert, NSAlertDelegate {
 }
 
 extension TextViewAlert {
-    func present() async -> NSApplication.ModalResponse {
-        if let window = NSApp.keyWindow {
+    func present(window: NSWindow? = nil) async -> NSApplication.ModalResponse {
+        if let window = window ?? NSApp.keyWindow {
             await beginSheetModal(for: window)
         } else {
             runModal()
