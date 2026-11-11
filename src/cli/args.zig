@@ -154,7 +154,7 @@ pub fn parse(
 
             // The error set is dependent on comptime T, so we always add
             // an extra error so we can have the "else" below.
-            const ErrSet = @TypeOf(err) || error{ Unknown, OutOfMemory } || Error;
+            const ErrSet = @TypeOf(err) || error{ Unknown, OutOfMemory, UnsupportedOSVersion } || Error;
             const message: [:0]const u8 = switch (@as(ErrSet, @errorCast(err))) {
                 // OOM is not recoverable since we need to allocate to
                 // track more error messages.
@@ -162,6 +162,11 @@ pub fn parse(
                 error.InvalidField => "unknown field",
                 error.ValueRequired => formatValueRequired(T, arena_alloc, key) catch "value required",
                 error.InvalidValue => formatInvalidValue(T, arena_alloc, key, value) catch "invalid value",
+                error.UnsupportedOSVersion => arena_alloc.printSentinel(
+                    "\"{?s}\" is not supported on this OS version",
+                    .{value},
+                    0,
+                ) catch "value not supported on this OS version",
                 else => try arena_alloc.printSentinel(
                     "unknown error {}",
                     .{err},
@@ -812,6 +817,40 @@ test "parse: diagnostic location" {
         try testing.expectEqualStrings("unknown field", diag.message);
         try testing.expectEqualStrings("test", diag.location.file.path);
         try testing.expectEqual(2, diag.location.file.line);
+    }
+}
+
+test "parse: diagnostic unsupported OS version" {
+    const testing = std.testing;
+
+    const Unsupported = struct {
+        pub fn parseCLI(_: *@This(), _: ?[]const u8) !void {
+            return error.UnsupportedOSVersion;
+        }
+    };
+
+    var data: struct {
+        a: Unsupported = .{},
+
+        _arena: ?ArenaAllocator = null,
+        _diagnostics: DiagnosticList = .{},
+    } = .{};
+    defer if (data._arena) |arena| arena.deinit();
+
+    var iter = try std.process.Args.IteratorGeneral(.{}).init(
+        testing.allocator,
+        "--a=fancy",
+    );
+    defer iter.deinit();
+    try parse(@TypeOf(data), testing.allocator, &data, &iter);
+    try testing.expect(data._diagnostics.items().len == 1);
+    {
+        const diag = data._diagnostics.items()[0];
+        try testing.expectEqualStrings("a", diag.key);
+        try testing.expectEqualStrings(
+            "value \"fancy\" is not supported on this OS version",
+            diag.message,
+        );
     }
 }
 

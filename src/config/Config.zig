@@ -1042,6 +1042,10 @@ palette: Palette = .{},
 ///   * `macos-glass-regular` - Standard glass effect with some opacity
 ///   * `macos-glass-clear` - Highly transparent glass effect
 ///
+/// > [!NOTE]
+/// > On macOS versions earlier than 26.0, the macOS values are reported
+/// > as a configuration error and ignored.
+///
 /// If the macOS values are set, then this implies `background-blur = true`
 /// on non-macOS platforms.
 ///
@@ -9991,6 +9995,17 @@ pub const BackgroundBlur = union(enum) {
                 // We can only parse void types
                 const info_ty = @typeInfo(BackgroundBlur).@"union".field_types[@backingInt(tag)];
                 if (info_ty != void) break :tag;
+
+                // The native glass effects require macOS 26. Other
+                // platforms treat them as a standard blur.
+                if (comptime builtin.os.tag == .macos) switch (tag) {
+                    .@"macos-glass-regular",
+                    .@"macos-glass-clear",
+                    => if (!internal_os.macos.isAtLeastVersion(28, 0, 0))
+                        return error.UnsupportedOSVersion,
+                    else => {},
+                };
+
                 self.* = @unionInit(
                     BackgroundBlur,
                     @tagName(tag),
@@ -10061,6 +10076,20 @@ pub const BackgroundBlur = union(enum) {
 
         try v.parseCLI("42");
         try testing.expectEqual(42, v.radius);
+
+        if (comptime builtin.os.tag == .macos) {
+            if (!internal_os.macos.isAtLeastVersion(26, 0, 0)) {
+                try testing.expectError(
+                    error.UnsupportedOSVersion,
+                    v.parseCLI("macos-glass-regular"),
+                );
+                try testing.expectError(
+                    error.UnsupportedOSVersion,
+                    v.parseCLI("macos-glass-clear"),
+                );
+                return;
+            }
+        }
 
         try v.parseCLI("macos-glass-regular");
         try testing.expectEqual(.@"macos-glass-regular", v);
