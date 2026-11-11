@@ -31,6 +31,25 @@ extension NSWindow {
     }
 }
 
+extension NSWindow {
+    /// The height of the titlebar that overlaps the content view of a window with a
+    /// full size content view. This is zero if the content view isn't full size or
+    /// if there is no titlebar over it (e.g. in fullscreen).
+    ///
+    /// This doesn't rely on the window having been laid out or on `contentLayoutRect`,
+    /// which some of our windows override.
+    var fullSizeContentTitlebarHeight: CGFloat {
+        guard styleMask.contains(.fullSizeContentView),
+              styleMask.contains(.titled),
+              !styleMask.contains(.fullScreen) else { return 0 }
+        let contentRect = NSRect(x: 0, y: 0, width: 100, height: 100)
+        let frameRect = NSWindow.frameRect(
+            forContentRect: contentRect,
+            styleMask: styleMask.subtracting(.fullSizeContentView))
+        return max(frameRect.height - contentRect.height, 0)
+    }
+}
+
 // MARK: Native Tabbing
 
 extension NSWindow {

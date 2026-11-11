@@ -3417,7 +3417,7 @@ keybind: Keybinds = .{},
 @"macos-window-buttons": MacWindowButtons = .visible,
 
 /// The style of the macOS titlebar. Available values are: "native",
-/// "transparent", "tabs", and "hidden".
+/// "transparent", "tabs", "new-tabs", and "hidden".
 ///
 /// The "native" style uses the native macOS titlebar with zero customization.
 /// The titlebar will match your window theme (see `window-theme`).
@@ -3440,6 +3440,11 @@ keybind: Keybinds = .{},
 /// On macOS 13 and below, saved window state will not restore tabs correctly.
 /// macOS 14 does not have this issue and any other macOS version has not
 /// been tested.
+///
+/// The "new-tabs" style is the same as "transparent" but replaces the
+/// native tab bar with a custom tab bar. The custom tab bar can be placed
+/// at the top, left, right, or bottom of the window. The position is
+/// chosen by right-clicking the tab bar and is remembered across launches.
 ///
 /// The "hidden" style hides the titlebar. Unlike `window-decoration = none`,
 /// however, it does not remove the frame from the window or cause it to have
@@ -9284,6 +9289,7 @@ pub const MacTitlebarStyle = enum {
     native,
     transparent,
     tabs,
+    @"new-tabs",
     hidden,
 };
 

@@ -45,22 +45,155 @@ class TerminalViewContainer: NSView {
         // with the correct idealWidth/idealHeight. Before that (when
         // @FocusedValue hasn't propagated), it returns a tiny default.
         // Fall back to initialContentSize in that case.
+        let contentSize: NSSize
         if let initialContentSize,
            hostingSize.width < initialContentSize.width || hostingSize.height < initialContentSize.height {
-            return initialContentSize
+            contentSize = initialContentSize
+        } else {
+            contentSize = hostingSize
         }
-        return hostingSize
+
+        // Anything the edge accessory takes away from the terminal has to be
+        // added back so the terminal itself ends up at the requested size.
+        let extra = edgeAccessoryExtraSize
+        return NSSize(width: contentSize.width + extra.width, height: contentSize.height + extra.height)
     }
 
     private func setup() {
         addSubview(terminalView)
         terminalView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            terminalView.topAnchor.constraint(equalTo: topAnchor),
-            terminalView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            terminalView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            terminalView.trailingAnchor.constraint(equalTo: trailingAnchor),
-        ])
+        updateTerminalViewConstraints()
+    }
+
+    // MARK: Edge Accessory
+
+    /// An accessory view (e.g. a custom tab bar) pinned to one edge of the container.
+    /// The terminal view fills the remaining space.
+    struct EdgeAccessory {
+        let view: NSView
+        let edge: NSRectEdge
+        /// The size of the accessory perpendicular to its edge. For the top edge this is
+        /// the minimum; the accessory grows to cover the titlebar if there is one.
+        let thickness: CGFloat
+    }
+
+    private(set) var edgeAccessory: EdgeAccessory?
+    private var layoutConstraints: [NSLayoutConstraint] = []
+
+    /// Set (or remove, with nil) the accessory view pinned to an edge of the container.
+    ///
+    /// This expects the window to use a full size content view when an accessory is set:
+    /// a top accessory takes the place of the titlebar and everything else is laid out
+    /// below the titlebar.
+    func setEdgeAccessory(_ accessory: EdgeAccessory?) {
+        if let old = edgeAccessory?.view, old !== accessory?.view {
+            old.removeFromSuperview()
+        }
+
+        edgeAccessory = accessory
+        if let view = accessory?.view, view.superview !== self {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(view, positioned: .above, relativeTo: terminalView)
+        }
+
+        updateTerminalViewConstraints()
+        invalidateIntrinsicContentSize()
+    }
+
+    private func updateTerminalViewConstraints() {
+        NSLayoutConstraint.deactivate(layoutConstraints)
+
+        guard let accessory = edgeAccessory else {
+            layoutConstraints = [
+                terminalView.topAnchor.constraint(equalTo: topAnchor),
+                terminalView.leadingAnchor.constraint(equalTo: leadingAnchor),
+                terminalView.bottomAnchor.constraint(equalTo: bottomAnchor),
+                terminalView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            ]
+            NSLayoutConstraint.activate(layoutConstraints)
+            return
+        }
+
+        // We use left/right rather than leading/trailing on purpose: the
+        // accessory edge is a physical edge chosen by the user.
+        let view = accessory.view
+        let safeTop = safeAreaLayoutGuide.topAnchor
+        switch accessory.edge {
+        case .maxY:
+            // Top: the accessory replaces the titlebar. It is as tall as the
+            // titlebar when there is one and falls back to its own thickness
+            // otherwise (e.g. fullscreen).
+            let coverTitlebar = view.bottomAnchor.constraint(equalTo: safeTop)
+            coverTitlebar.priority = .defaultHigh
+            layoutConstraints = [
+                view.topAnchor.constraint(equalTo: topAnchor),
+                view.leftAnchor.constraint(equalTo: leftAnchor),
+                view.rightAnchor.constraint(equalTo: rightAnchor),
+                view.heightAnchor.constraint(greaterThanOrEqualToConstant: accessory.thickness),
+                coverTitlebar,
+                terminalView.topAnchor.constraint(equalTo: view.bottomAnchor),
+                terminalView.leftAnchor.constraint(equalTo: leftAnchor),
+                terminalView.rightAnchor.constraint(equalTo: rightAnchor),
+                terminalView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            ]
+
+        case .minY:
+            layoutConstraints = [
+                view.bottomAnchor.constraint(equalTo: bottomAnchor),
+                view.leftAnchor.constraint(equalTo: leftAnchor),
+                view.rightAnchor.constraint(equalTo: rightAnchor),
+                view.heightAnchor.constraint(equalToConstant: accessory.thickness),
+                terminalView.topAnchor.constraint(equalTo: safeTop),
+                terminalView.leftAnchor.constraint(equalTo: leftAnchor),
+                terminalView.rightAnchor.constraint(equalTo: rightAnchor),
+                terminalView.bottomAnchor.constraint(equalTo: view.topAnchor),
+            ]
+
+        case .minX:
+            layoutConstraints = [
+                view.topAnchor.constraint(equalTo: safeTop),
+                view.leftAnchor.constraint(equalTo: leftAnchor),
+                view.bottomAnchor.constraint(equalTo: bottomAnchor),
+                view.widthAnchor.constraint(equalToConstant: accessory.thickness),
+                terminalView.topAnchor.constraint(equalTo: safeTop),
+                terminalView.leftAnchor.constraint(equalTo: view.rightAnchor),
+                terminalView.rightAnchor.constraint(equalTo: rightAnchor),
+                terminalView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            ]
+
+        case .maxX:
+            layoutConstraints = [
+                view.topAnchor.constraint(equalTo: safeTop),
+                view.rightAnchor.constraint(equalTo: rightAnchor),
+                view.bottomAnchor.constraint(equalTo: bottomAnchor),
+                view.widthAnchor.constraint(equalToConstant: accessory.thickness),
+                terminalView.topAnchor.constraint(equalTo: safeTop),
+                terminalView.leftAnchor.constraint(equalTo: leftAnchor),
+                terminalView.rightAnchor.constraint(equalTo: view.leftAnchor),
+                terminalView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            ]
+
+        @unknown default:
+            layoutConstraints = []
+        }
+
+        NSLayoutConstraint.activate(layoutConstraints)
+    }
+
+    /// The space the edge accessory and the titlebar take away from the terminal.
+    private var edgeAccessoryExtraSize: NSSize {
+        guard let accessory = edgeAccessory else { return .zero }
+
+        // We can't rely on our safe area here because this is used to size the
+        // window before it has ever been laid out.
+        let titlebarHeight = window?.fullSizeContentTitlebarHeight ?? 0
+
+        switch accessory.edge {
+        case .maxY: return NSSize(width: 0, height: max(titlebarHeight, accessory.thickness))
+        case .minY: return NSSize(width: 0, height: titlebarHeight + accessory.thickness)
+        case .minX, .maxX: return NSSize(width: accessory.thickness, height: titlebarHeight)
+        @unknown default: return .zero
+        }
     }
 
     override func viewDidMoveToWindow() {

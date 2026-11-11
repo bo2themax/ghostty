@@ -916,6 +916,7 @@ extension Ghostty.Config {
     enum MacOSTitlebarStyle: String {
         static let `default` = MacOSTitlebarStyle.transparent
         case native, transparent, tabs, hidden
+        case newTabs = "new-tabs"
     }
 
     enum DragHandle: String {

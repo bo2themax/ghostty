@@ -51,6 +51,13 @@ class TerminalWindow: NSWindow {
         true
     }
 
+    /// Whether tab titles can be edited inline in the native tab bar. Window styles
+    /// that don't show the native tab bar must return false and provide their own
+    /// editing by overriding `beginInlineTabTitleEdit(for:)`.
+    var supportsNativeTabTitleEditing: Bool {
+        true
+    }
+
     /// Glass effect view for liquid glass background when transparency is enabled
     private var glassEffectView: NSView?
 
@@ -864,7 +871,7 @@ extension TerminalWindow: TabTitleEditorDelegate {
         _ editor: TabTitleEditor,
         canRenameTabFor targetWindow: NSWindow
     ) -> Bool {
-        targetWindow.windowController is BaseTerminalController
+        supportsNativeTabTitleEditing && targetWindow.windowController is BaseTerminalController
     }
 
     func tabTitleEditor(

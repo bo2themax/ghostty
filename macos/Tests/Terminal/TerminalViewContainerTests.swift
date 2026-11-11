@@ -60,4 +60,37 @@ struct TerminalViewContainerTests {
             #expect(view.glassEffectView == nil)
         }
     }
+
+    @MainActor
+    @Test(arguments: [
+        (NSRectEdge.minX, NSRect(x: 0, y: 0, width: 50, height: 300)),
+        (NSRectEdge.maxX, NSRect(x: 350, y: 0, width: 50, height: 300)),
+        (NSRectEdge.minY, NSRect(x: 0, y: 0, width: 400, height: 50)),
+        (NSRectEdge.maxY, NSRect(x: 0, y: 250, width: 400, height: 50)),
+    ])
+    func edgeAccessoryLayout(edge: NSRectEdge, expected: NSRect) async throws {
+        let container = TerminalViewContainer {
+            Color.clear.frame(idealWidth: 200, idealHeight: 100)
+        }
+        container.frame = NSRect(x: 0, y: 0, width: 400, height: 300)
+        container.layoutSubtreeIfNeeded()
+        let sizeWithoutAccessory = container.intrinsicContentSize
+
+        let accessory = NSView()
+        container.setEdgeAccessory(.init(view: accessory, edge: edge, thickness: 50))
+        container.layoutSubtreeIfNeeded()
+        #expect(accessory.superview === container)
+        #expect(accessory.frame == expected)
+
+        // The accessory must not take space away from the terminal.
+        let isHorizontal = edge == .minX || edge == .maxX
+        #expect(container.intrinsicContentSize == NSSize(
+            width: sizeWithoutAccessory.width + (isHorizontal ? 50 : 0),
+            height: sizeWithoutAccessory.height + (isHorizontal ? 0 : 50)))
+
+        container.setEdgeAccessory(nil)
+        container.layoutSubtreeIfNeeded()
+        #expect(accessory.superview == nil)
+        #expect(container.intrinsicContentSize == sizeWithoutAccessory)
+    }
 }
