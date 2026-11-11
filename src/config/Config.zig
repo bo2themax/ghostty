@@ -2193,8 +2193,9 @@ keybind: Keybinds = .{},
 ///     and dark themes, light or dark mode follows the system theme. This is
 ///     only supported on Linux builds.
 ///
-/// On macOS, if `macos-titlebar-style` is `tabs` or `transparent`, the window theme will be
-/// automatically set based on the luminosity of the terminal background color.
+/// On macOS, if `macos-titlebar-style` is `tabs`, `vertical-tabs`, or
+/// `transparent`, the window theme will be automatically set based on the
+/// luminosity of the terminal background color.
 /// This only applies to terminal windows. This setting will still apply to
 /// non-terminal windows within Ghostty.
 ///
@@ -3417,7 +3418,7 @@ keybind: Keybinds = .{},
 @"macos-window-buttons": MacWindowButtons = .visible,
 
 /// The style of the macOS titlebar. Available values are: "native",
-/// "transparent", "tabs", and "hidden".
+/// "transparent", "tabs", "vertical-tabs", and "hidden".
 ///
 /// The "native" style uses the native macOS titlebar with zero customization.
 /// The titlebar will match your window theme (see `window-theme`).
@@ -3440,6 +3441,13 @@ keybind: Keybinds = .{},
 /// On macOS 13 and below, saved window state will not restore tabs correctly.
 /// macOS 14 does not have this issue and any other macOS version has not
 /// been tested.
+///
+/// The "vertical-tabs" style shows tabs in a sidebar on the leading edge
+/// of the window instead of the native horizontal tab bar. Tabs are still
+/// native macOS window tabs, so tab shortcuts, tab overview, and window
+/// restoration behave the same as with the other styles. The sidebar can
+/// be shown or hidden with "View > Show/Hide Tab Bar". This style requires
+/// macOS 26 or later; on earlier versions it falls back to "transparent".
 ///
 /// The "hidden" style hides the titlebar. Unlike `window-decoration = none`,
 /// however, it does not remove the frame from the window or cause it to have
@@ -9284,6 +9292,7 @@ pub const MacTitlebarStyle = enum {
     native,
     transparent,
     tabs,
+    @"vertical-tabs",
     hidden,
 };
 

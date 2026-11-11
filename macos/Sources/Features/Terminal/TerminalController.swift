@@ -32,6 +32,12 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
 #else
             "TerminalTabsTitlebarVentura"
 #endif
+        case .verticalTabs:
+            if #available(macOS 26.0, *) {
+                "TerminalVerticalTabs"
+            } else {
+                "TerminalTransparentTitlebar"
+            }
         }
 
         return nib
@@ -1113,8 +1119,17 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
         }
 
         // Initialize our content view to the SwiftUI root
-        let container = TerminalViewContainer {
-            TerminalView(ghostty: ghostty, viewModel: self, delegate: self)
+        let container: TerminalViewContainer
+        if #available(macOS 26.0, *), let window = window as? VerticalTabsTerminalWindow {
+            container = TerminalViewContainer {
+                VerticalTabsSplitView(model: window.verticalTabs) {
+                    TerminalView(ghostty: ghostty, viewModel: self, delegate: self)
+                }
+            }
+        } else {
+            container = TerminalViewContainer {
+                TerminalView(ghostty: ghostty, viewModel: self, delegate: self)
+            }
         }
 
         // Set the initial content size on the container so that
