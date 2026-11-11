@@ -1122,7 +1122,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
         let container: TerminalViewContainer
         if #available(macOS 26.0, *), let window = window as? VerticalTabsTerminalWindow {
             container = TerminalViewContainer {
-                VerticalTabsSplitView(model: window.verticalTabs) {
+                window.tabBarContainer {
                     TerminalView(ghostty: ghostty, viewModel: self, delegate: self)
                 }
             }

@@ -3,12 +3,22 @@ import SwiftUI
 
 // MARK: - Model
 
-/// The sidebar state of one `VerticalTabsTerminalWindow`.
+/// A window that shows its tab group in a `TabBarContainer` instead of the native tab bar.
+@available(macOS 26.0, *)
+protocol TabBarWindow: NSWindow {
+    var tabBar: TabBarModel { get }
+}
+
+/// The tab bar state of one `TabBarWindow`. It doesn't depend on where the bar is placed.
 ///
 /// The model never stores tab windows. Rows carry an `ObjectIdentifier` and actions look the
-/// window up in the live tab group, so a closed tab can't be kept alive by a sidebar.
+/// window up in the live tab group, so a closed tab can't be kept alive by a tab bar.
 @available(macOS 26.0, *)
-final class VerticalTabsModel: ObservableObject {
+final class TabBarModel: ObservableObject {
+    /// Post with the changed window as the object whenever something shown in a tab
+    /// (title, color, shortcut, zoom state) changes.
+    static let tabDidChangeNotification = Notification.Name("TabBarTabDidChange")
+
     struct Tab: Identifiable, Equatable {
         let id: ObjectIdentifier
         let title: String
@@ -28,25 +38,27 @@ final class VerticalTabsModel: ObservableObject {
         }
     }
 
-    /// Sidebar visibility, kept separate from `tabs` so tab changes don't re-evaluate
-    /// the split view (and with it the terminal view).
+    /// Tab bar visibility, kept separate from `tabs` so tab changes don't re-evaluate
+    /// the container (and with it the terminal view).
     final class Layout: ObservableObject {
-        @Published var visibility: NavigationSplitViewVisibility
+        @Published var isVisible: Bool
 
-        var isSidebarVisible: Bool { visibility != .detailOnly }
-
-        init(visibility: NavigationSplitViewVisibility) {
-            self.visibility = visibility
+        init(isVisible: Bool) {
+            self.isVisible = isVisible
         }
     }
 
     /// The tabs of this window's tab group, in tab order.
     @Published private(set) var tabs: [Tab] = []
 
+    /// False while this window is a background tab. Its bar is then replaced by an empty
+    /// placeholder of the same size, so hidden tabs keep no bar views or layers.
+    @Published private(set) var isActive = true
+
     let layout: Layout
 
     /// The visibility new windows start with: the last one the user chose.
-    private static var lastVisibility: NavigationSplitViewVisibility = .all
+    private static var lastIsVisible = true
 
     private weak var window: NSWindow?
     private weak var observedTabGroup: NSWindowTabGroup?
@@ -57,10 +69,10 @@ final class VerticalTabsModel: ObservableObject {
 
     init(window: NSWindow) {
         self.window = window
-        self.layout = Layout(visibility: Self.lastVisibility)
+        self.layout = Layout(isVisible: Self.lastIsVisible)
 
         tabDidChangeObserver = NotificationCenter.default.addObserver(
-            forName: VerticalTabsTerminalWindow.tabDidChangeNotification,
+            forName: Self.tabDidChangeNotification,
             object: nil,
             queue: nil
         ) { [weak self] notification in
@@ -87,14 +99,17 @@ final class VerticalTabsModel: ObservableObject {
         refresh()
     }
 
-    /// Called when this window becomes the selected tab. Hidden tabs don't need rows, so
-    /// release the rows of the other windows in the group; each window rebuilds its own
-    /// rows here. This keeps the number of live rows independent of the number of tabs.
+    /// Called when this window becomes the selected tab. Hidden tabs don't need a bar, so
+    /// release the bars of the other windows in the group; each window rebuilds its own
+    /// bar here. This keeps the number of live bar views independent of the number of tabs.
     func activate() {
         refreshIfNeeded()
+        if !isActive {
+            isActive = true
+        }
         guard let window, let others = window.tabbedWindows else { return }
         for other in others where other !== window {
-            (other as? VerticalTabsTerminalWindow)?.verticalTabs.deactivate()
+            (other as? TabBarWindow)?.tabBar.deactivate()
         }
     }
 
@@ -102,6 +117,9 @@ final class VerticalTabsModel: ObservableObject {
         needsRefresh = true
         if !tabs.isEmpty {
             tabs = []
+        }
+        if isActive {
+            isActive = false
         }
     }
 
@@ -158,25 +176,25 @@ final class VerticalTabsModel: ObservableObject {
         }
     }
 
-    // MARK: Sidebar Visibility
+    // MARK: Visibility
 
-    func setVisibility(_ visibility: NavigationSplitViewVisibility) {
-        Self.lastVisibility = visibility
+    func setVisible(_ isVisible: Bool) {
+        Self.lastIsVisible = isVisible
         guard let window else { return }
 
-        // The tab group shares one sidebar state so switching tabs doesn't resize the
+        // The tab group shares one visibility so switching tabs doesn't resize the
         // terminal.
         for other in window.tabbedWindows ?? [window] {
-            guard let model = (other as? VerticalTabsTerminalWindow)?.verticalTabs else { continue }
-            if model.layout.visibility != visibility {
-                model.layout.visibility = visibility
+            guard let model = (other as? TabBarWindow)?.tabBar else { continue }
+            if model.layout.isVisible != isVisible {
+                model.layout.isVisible = isVisible
             }
         }
     }
 
-    func toggleSidebar() {
-        withAnimation {
-            setVisibility(layout.isSidebarVisible ? .detailOnly : .all)
+    func toggleVisibility() {
+        withAnimation(.snappy(duration: 0.2)) {
+            setVisible(!layout.isVisible)
         }
     }
 
@@ -272,48 +290,81 @@ final class VerticalTabsModel: ObservableObject {
 
 // MARK: - Views
 
-/// Places the vertical tabs sidebar next to the terminal content.
+/// Places a tab bar on one edge of the terminal content.
+///
+/// A plain stack rather than a split view: the bar has a fixed size, so it needs no divider
+/// or column state, and the same container works for a bar on any edge.
 @available(macOS 26.0, *)
-struct VerticalTabsSplitView<Detail: View>: View {
-    let model: VerticalTabsModel
-    @ObservedObject private var layout: VerticalTabsModel.Layout
-    private let detail: Detail
+struct TabBarContainer<Bar: View, Content: View>: View {
+    let edge: Edge
+    @ObservedObject private var layout: TabBarModel.Layout
+    private let bar: Bar
+    private let content: Content
 
-    /// Fixed so every tab in a group has the same terminal size; a per-window user
-    /// width would resize (and reflow) the terminal on every tab switch.
-    static var sidebarWidth: CGFloat { 220 }
-
-    init(model: VerticalTabsModel, @ViewBuilder detail: () -> Detail) {
-        self.model = model
-        self.layout = model.layout
-        self.detail = detail()
+    init(
+        edge: Edge,
+        layout: TabBarModel.Layout,
+        @ViewBuilder bar: () -> Bar,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.edge = edge
+        self.layout = layout
+        self.bar = bar()
+        self.content = content()
     }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: Binding(
-            get: { layout.visibility },
-            set: { model.setVisibility($0) }
-        )) {
-            VerticalTabsSidebar(model: model)
-                .navigationSplitViewColumnWidth(Self.sidebarWidth)
-        } detail: {
-            detail
+        let stack = switch edge {
+        case .leading, .trailing: AnyLayout(HStackLayout(spacing: 0))
+        case .top, .bottom: AnyLayout(VStackLayout(spacing: 0))
         }
-        .navigationSplitViewStyle(.balanced)
+
+        // The content keeps its position in the view tree whether or not the bar is
+        // shown, so toggling the bar never recreates the terminal.
+        stack {
+            if layout.isVisible, edge == .leading || edge == .top {
+                placedBar
+            }
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if layout.isVisible, edge == .trailing || edge == .bottom {
+                placedBar
+            }
+        }
+        .clipped()
+    }
+
+    private var placedBar: some View {
+        bar.transition(.move(edge: edge))
     }
 }
 
+/// The tab bar for the leading or trailing edge: a fixed width column of rows.
 @available(macOS 26.0, *)
-private struct VerticalTabsSidebar: View {
-    @ObservedObject var model: VerticalTabsModel
+struct VerticalTabBar: View {
+    @ObservedObject var model: TabBarModel
 
     @State private var draggingID: ObjectIdentifier?
     @State private var dragOffset: CGFloat = 0
 
+    /// Fixed so every tab in a group has the same terminal size; a per-window user
+    /// width would resize (and reflow) the terminal on every tab switch.
+    static let width: CGFloat = 220
     static let rowHeight: CGFloat = 34
     static let rowSpacing: CGFloat = 4
 
     var body: some View {
+        Group {
+            if model.isActive {
+                bar
+            } else {
+                Color.clear
+            }
+        }
+        .frame(width: Self.width)
+    }
+
+    private var bar: some View {
         ScrollView {
             LazyVStack(spacing: Self.rowSpacing) {
                 ForEach(model.tabs) { tab in
@@ -339,7 +390,7 @@ private struct VerticalTabsSidebar: View {
         .onAppear(perform: model.refreshIfNeeded)
     }
 
-    private func row(_ tab: VerticalTabsModel.Tab) -> some View {
+    private func row(_ tab: TabBarModel.Tab) -> some View {
         let isDragging = draggingID == tab.id
         return VerticalTabRow(
             tab: tab,
@@ -368,7 +419,7 @@ private struct VerticalTabsSidebar: View {
     }
 
     @ViewBuilder
-    private func contextMenu(_ tab: VerticalTabsModel.Tab) -> some View {
+    private func contextMenu(_ tab: TabBarModel.Tab) -> some View {
         Button("Close Tab", systemImage: "xmark") { model.closeTab(tab.id) }
         Button("Close Other Tabs", systemImage: "xmark") { model.closeOtherTabs(tab.id) }
             .disabled(model.tabs.count < 2)
@@ -391,7 +442,7 @@ private struct VerticalTabsSidebar: View {
 
 @available(macOS 26.0, *)
 private struct VerticalTabRow: View, Equatable {
-    let tab: VerticalTabsModel.Tab
+    let tab: TabBarModel.Tab
     let isSelected: Bool
     let onClose: () -> Void
 
@@ -430,7 +481,7 @@ private struct VerticalTabRow: View, Equatable {
             trailing
         }
         .padding(.horizontal, 10)
-        .frame(height: VerticalTabsSidebar.rowHeight)
+        .frame(height: VerticalTabBar.rowHeight)
         .background {
             if isSelected {
                 // A raised row: the window background in light mode, a lighter
