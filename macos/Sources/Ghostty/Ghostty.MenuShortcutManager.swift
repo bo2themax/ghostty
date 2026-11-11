@@ -152,8 +152,19 @@ extension Ghostty.MenuShortcutManager {
             self.modifiersRawValue = modifiers.intersection(Self.shortcutModifiers).rawValue
         }
 
+        @MainActor
         init?(event: NSEvent) {
-            guard let keyEquivalent = event.charactersIgnoringModifiers else { return nil }
+            guard
+                event.type == .keyDown,
+                // We use physical key code to cover different layouts.
+                let char = KeyboardLayout.character(
+                    for: event.keyCode,
+                    modifiers: event.modifierFlags,
+                )
+            else {
+                return nil
+            }
+            let keyEquivalent = String(char)
             self.init(keyEquivalent: keyEquivalent, modifiers: event.modifierFlags)
         }
 
