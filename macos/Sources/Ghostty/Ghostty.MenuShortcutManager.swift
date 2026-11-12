@@ -99,9 +99,7 @@ private extension Ghostty.MenuShortcutManager {
         let physicalKeyCode = isPhysical ? Ghostty.Input.Key(cKey: trigger.key.physical)?.keyCode : nil
         // Build a direct lookup for key-equivalent dispatch so we don't need to
         // linearly walk the full menu hierarchy at event time.
-        guard let key = MenuShortcutKey(shortcut, physicalKeyCode: physicalKeyCode) else {
-            return false
-        }
+        let key = MenuShortcutKey(shortcut, physicalKeyCode: physicalKeyCode)
 
         menu.keyEquivalent = shortcut.key.character.description
         menu.keyEquivalentModifierMask = key.modifierFlags
@@ -132,18 +130,14 @@ extension Ghostty.MenuShortcutManager {
             NSEvent.ModifierFlags(rawValue: modifiersRawValue)
         }
 
-        init?(keyEquivalent: String, modifiers: NSEvent.ModifierFlags) {
-            let normalized = keyEquivalent.lowercased()
-            guard !normalized.isEmpty else { return nil }
+        init(keyEquivalent: Character, modifiers: NSEvent.ModifierFlags) {
             var mods = modifiers.intersection(Self.shortcutModifiers)
-            if
-                keyEquivalent.lowercased() != keyEquivalent.uppercased(),
-                normalized.uppercased() == keyEquivalent {
-                // If key equivalent is case sensitive and
-                // it's originally uppercased, then we need to add `shift` to the modifiers
+            // An uppercase key equivalent implies shift.
+            if keyEquivalent.isUppercase {
                 mods.insert(.shift)
             }
-            self.identity = .keyEquivalent(normalized)
+            // Stored as a String because Character.lowercased() returns one.
+            self.identity = .keyEquivalent(keyEquivalent.lowercased())
             self.modifiersRawValue = mods.rawValue
         }
 
@@ -164,19 +158,16 @@ extension Ghostty.MenuShortcutManager {
             else {
                 return nil
             }
-            let keyEquivalent = String(char)
-            self.init(keyEquivalent: keyEquivalent, modifiers: event.modifierFlags)
+            self.init(keyEquivalent: char, modifiers: event.modifierFlags)
         }
 
         /// Create from a SwiftUI `KeyboardShortcut`.
-        init?(_ shortcut: KeyboardShortcut, physicalKeyCode: UInt16? = nil) {
+        init(_ shortcut: KeyboardShortcut, physicalKeyCode: UInt16? = nil) {
             let modifiers = NSEvent.ModifierFlags(swiftUIFlags: shortcut.modifiers)
             if let physicalKeyCode {
                 self.init(physicalKeyCode: physicalKeyCode, modifiers: modifiers)
             } else {
-                self.init(
-                    keyEquivalent: shortcut.key.character.description,
-                    modifiers: modifiers)
+                self.init(keyEquivalent: shortcut.key.character, modifiers: modifiers)
             }
         }
     }
